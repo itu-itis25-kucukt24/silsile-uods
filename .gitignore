@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Çevresel Değişkenler (Kritik Güvenlik)
+.env
+
+# Veritabanı Dosyaları
+*.db
+*.sqlite3
+
+# Yüklenen Optik Formlar (Geçici Dosyalar)
+uploads/

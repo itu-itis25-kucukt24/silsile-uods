@@ -1,0 +1,1045 @@
+\documentclass[12pt, a4paper]{article}
+
+% --- TÜRKÇE KARAKTER VE DİL DESTEĞİ ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[turkish]{babel}
+
+% --- FONT: Arial (uarial veya fontspec ile; pdflatex için getnonfreefonts gerekir)
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% --- KENAR BOŞLUKLARI: üst-alt-sağ-sol 2.5cm ---
+\usepackage[left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm]{geometry}
+
+% --- PAKETLER ---
+\usepackage{setspace}
+\setstretch{1.15}          % Şablon: Satır aralığı 1.15
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\usepackage{ragged2e}      % İki tarafa yaslı için
+\usepackage{verbatim}      % Kod blokları için
+
+% --- İKİ TARAFA YASLI ---
+\justifying
+
+% --- BAŞLIK FORMATLARI ---
+\titleformat{\section}
+  {\fontsize{14pt}{16.8pt}\fontseries{b}\selectfont\MakeUppercase}
+  {\thesection.}{0.5em}{}
+\titleformat{\subsection}
+  {\fontsize{14pt}{16.8pt}\fontseries{b}\selectfont}
+  {\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}
+  {\fontsize{14pt}{16.8pt}\fontseries{b}\selectfont}
+  {\thesubsubsection.}{0.5em}{}
+
+% --- KUTU KOMUTU ---
+\newcommand{\dkutu}[2]{%
+  \fbox{%
+    \begin{minipage}[c][2cm][c]{#1}%
+      \centering\small #2%
+    \end{minipage}%
+  }%
+}
+
+\begin{document}
+
+% ============================================================
+\section{Proje Özeti}
+% ============================================================
+
+Eğitimdeki belge sahteciliği ve veri manipülasyonu, küresel ölçekte ciddiyetini korumaya devam eden bir sorun olarak süregelmektedir \cite{alnafrah2021, chaudhari2025}. Merkezi akademik kayıt sistemlerinin tek bir yetkili kurum ya da kişinin denetimine bırakılması, bu güven açığının temel kaynağını oluşturmaktadır \cite{rani2024}. Türkiye'de her yıl milyonlarca öğrencinin katıldığı Yükseköğretim Kurumları Sınavı (YKS) gibi merkezi sınav sistemleri de bu güven kırılganlığından bağımsız değildir. Sınav sürecinde kullanılan optik cevap formlarının sayım aşamasına taşınması, sayım merkezi aktarımları ve sonuçların ilanı arasında geçen süre zarfında veri bütünlüğünün hangi mekanizmalarla güvence altına alındığı konusunda kamuoyunda ciddi soru işaretleri doğmaktadır. Optik formlarda fiziksel yıpranma, sayım sürecinde kasıtlı veri manipülasyonu ya da aracı sistemlerde gerçekleşebilecek kayıt değişiklikleri, sonuçların güvenilirliğini azaltan başlıca riskler arasında yer almaktadır.
+
+Bu çalışma, söz konusu güven açığını kökeninden kapatmaya yönelik bütünleşik bir yazılım sistemi önermektedir. Projenin temel hedefi; sınav bitiminin hemen ardından, öğrencinin gözetimi altında optik cevap formunun dijital görüntüsünün alınması, bu görüntünün kriptografik yöntemlerle değiştirilemez hâle getirilmesi ve tüm işlem kaydının merkeziyetsiz bir blokzincir ağına aktarılmasıdır. Bu öneri, sınav anından sonuçların açıklandığı ana kadar geçen süreç boyunca veri bütünlüğünü matematiksel olarak ispat edilebilir hâle getirmekte; herhangi bir aracı kurumun ya da kişinin kayıt üzerinde değişiklik yapmasını teknik olarak imkânsız hâle getirmektedir \cite{pandey2024, berrios2025}.
+
+Sistemin çalışma mantığı altı temel adım üzerine inşa edilmiştir. İlk aşamada kullanıcı arayüzü üzerinden öğrencinin optik formunun fotoğrafı sisteme iletilir. İkinci aşamada Python/Flask tabanlı arka uç sunucu, gelen veriyi karşılayarak işlem sırasına alır. Üçüncü aşamada OpenCV kütüphanesi ile görüntü işleme algoritmaları devreye girerek optik form temizlenir: Lüminesans dönüşümü (ITU-R BT.601) ile renk bilgisi tek kanala indirgenir, $5\times 5$ Gauss konvolüsyonu ile görüntü gürültüsünden arındırılır ve Otsu adaptif eşikleme yöntemi \cite{otsu1979} ile her piksel yalnızca siyah ya da beyaz değer alacak şekilde ikili forma dönüştürülür. Dördüncü aşamada temizlenmiş görüntü, IPFS (InterPlanetary File System) protokolü \cite{benet2014} üzerinden merkeziyetsiz bir depolama ağına yüklenerek içerik tabanlı bir parmak izi olan CID (Content Identifier) değeri üretilir. Beşinci aşamada elde edilen veriler; öğrenci numarası, IPFS CID değeri ve zaman damgası SHA-256 kriptografik özet fonksiyonundan geçirilerek anonimleştirilir ve dijital imzayla Polygon blokzincir ağına kaydedilir. Altıncı ve son aşamada kullanıcıya doğrulanabilir bir işlem makbuzu sunulur.
+
+Sistemin en önemli güvenlik bileşeni, kişisel verilerin blokzincire doğrudan yazılmamasını sağlayan kriptografik anonimleştirme aşamasıdır. 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında kişisel veri niteliği taşıyan öğrenci numarası, sınav tarihi ve kuruma özgü bir tuz (salt) değeriyle birlikte SHA-256 fonksiyonundan geçirilerek oluşturulmuş bir anahtar değerine dönüştürülür; yalnızca bu anahtar değer zincire yazılır. Bu tasarım sayesinde yetkili kurum, elindeki tuz değeriyle kaydı her zaman teyit edebilirken tuz değerine sahip olmayan üçüncü taraflar kimliği geri elde edemez \cite{kvkk6698}. Akıllı sözleşme mimarisi Solidity dili ile geliştirilmiş olup kayıtlar \texttt{mapping(bytes32 => Record)} veri yapısında tutulmaktadır. Her kayıt IPFS CID değerini, zaman damgasını ve doğrulayıcı cüzdan adresini bulundurmaktadır.
+
+Sistemin önemli bir tasarım fikri, internet bağlantısının kesilebileceği sınav ortamlarını göz önünde bulundurarak geliştirilen çevrimdışı tampon katmanıdır. Bağlantı olmadığı zaman veriler SHA-256 ile imzalanarak PENDING durumunda yerel bir SQLite veritabanına kaydedilir ve bağlantı yeniden sağlandığında eşzamanlama servisi devreye girerek bu kayıtları otomatik olarak önce IPFS'e, ardından blokzincir ağına aktarır. Bu mimari, sınav ortamının fiziksel koşullarından etkilenmeden veri bütünlüğünün garantiye alınmasını sağlamaktadır.
+
+Mevcut çalışmalara bakıldığında, blokzincir teknolojisinin eğitim alanındaki uygulamalarının büyük çoğunluğunun diploma ve sertifika yönetimine yoğunlaştığı görülmektedir \cite{grather2018, tanvo2024, berrios2025}. Gräther ve arkadaşlarının öncü çalışması olan Yaşam Boyu Öğrenme Pasaportu sistemi, sertifikaların blokzincirde parmak izinin saklanması ve doğrulanması üzerine geliştirilmiştir \cite{grather2018}. Benzer biçimde Chaudhari ve Shirole, 99 akademik çalışmayı içeren sistematik derlemelerinde blokzincir tabanlı akademik kayıt yönetimi uygulamalarını değerlendirmiştir. Bundan yola çıkarak Mevcut çözümlerin ölçeklenebilirlik ve standardizasyon sorunlarıyla boğuştuğunu ortaya koymuştur \cite{chaudhari2025}. Tan-Vo ve arkadaşları ise Optimistic Rollups ve makine öğrenmesini birleştiren sistemlerinin sertifika iptali sürecinde yüzde altmış iki civarında gecikme ve maliyet azalması sağladığını deneysel olarak kanıtlamıştır \cite{tanvo2024}. Bununla birlikte bu çalışmalar, sınav sürecinin ham veri noktasından, yani optik formun üretildiği andan itibaren başlayan uçtan uca bir güven zinciri kurmakta yetersiz kalmaktadır. Optik Form Doğrulama Sistemi (OFDS), bu boşluğu doğrudan hedef alarak sınav kayıt güvencesini anın kendisinden başlatmaktadır.
+
+Projenin yarışma kapsamında konumlandırılması değerlendirildiğinde, DLT Sistemlerinde Mahremiyet ve Seçilmiş DLT Uygulama Alanları başlıkları altında doğrudan ilgili bir çalışma olduğu görülmektedir. Sistem; merkeziyetsiz depolama ağlarında veri mahremiyeti (IPFS), kriptografik özet fonksiyonlarıyla değiştirilemez kayıt güvencesi, akıllı sözleşme tabanlı erişim kontrolü ve kamu yönetimi alanındaki gerçek dünya sorunlarına blokzincir çözümü üretme amaçlarını bir arada karşılamaktadır. Proje, ülkemizde her yıl yaklaşık iki buçuk milyon öğrenciyi ilgilendiren merkezi sınav süreçlerine uygulanabilir, teknik ve hukuki çerçeveyle uyumlu, yerlileştirilmiş ve genişletilebilir bir çözüm ortaya koymaktadır.
+
+Sonuç itibarıyla, Optik Form Doğrulama Sistemi; görüntü işleme, merkeziyetsiz depolama ve blokzincir teknolojilerini bütünleşik yapıda bir araya getiren özgün bir çözüm sunmaktadır. Bu sistem sayesinde sınav sürecinde ortaya çıkabilecek manipülasyon ve hata olasılıkları teknik bir yöntemle engellenmektedir. Sürecin şeffaflığı ve hesap verebilirlik açısından kamuoyuna somut, doğrulanabilir ve denetlenebilir bir altyapı kazandırılmaktadır.
+
+% ============================================================
+\section{Katma Değer ve Yenilikçilik}
+% ============================================================
+
+\subsection{Mevcut Problemin Tanımı ve Çözüm Boşluğu}
+
+Sınav sonuçlarına yönelik toplumsal güvensizlik, yalnızca Türkiye'ye özgü bir gerçek değil; küreselde de eğitim sistemlerinin ortak eksikliğini yansıtan bir sorundur. Alnafrah ve Mouselli'nin Elsevier'de yayımlanan kapsamlı çalışması, kâğıt tabanlı akademik kayıt sistemlerinin dört temel eksikliğini vurgular: tahrifat riski, doğrulama güçlüğü, insan kaynağı talebi ve tek nokta hatası \cite{alnafrah2021}. Bu eksiklikler, yalnızca üniversite diploma süreçlerinde değil, merkezi sınav yönetiminde de geçerliliğini korumaktadır. Merkezi sınav süreçlerinde optik cevap formları sınav salonundan sayım merkezine aktarılana dek birden fazla aracıdan geçmektedir. Bu aktarım sürecinde formların fiziksel olarak zarar görmesi, kasıtlı değiştirilmesi ya da sayım sistemine yüklenmeden önce veri kaydının manipüle edilmesi teknik olarak engellenebilir, ancak mevcut sistemlerde kriptografik bir doğrulama mekanizması bulunmamaktadır. Sistemde oluşabilecek herhangi bir hatanın ya da müdahalenin tespiti ancak merkezi kayıtlara güvenilmesini gerektiren geleneksel denetim yöntemleriyle mümkün olabilmekte, bu da denetim sürecini çözmeye çalıştığı güven sorununu yeniden üretmektedir.
+
+Blokzincir teknolojisinin eğitim alanındaki uygulamalarını 99 akademik çalışma üzerinden inceleyen Chaudhari ve Shirole, mevcut sistemlerin büyük bölümünün on-chain depolama maliyetleri, ölçeklenebilirlik sorunları ve standart eksikliği nedeniyle pratikte benimsenmekte güçlük çektiğini ortaya koymuştur \cite{chaudhari2025}. Aynı çalışmada, Optik Karakter Tanıma (OCR) tabanlı doğrulama yaklaşımlarının yalnızca gri tonlamalı ve logosuz belgelerle sınırlı kaldığı da eleştirel bir tespit olarak vurgulanmaktadır \cite{chaudhari2025}. Bu tespit, mevcut çözümlerin optik form görüntüsü gibi çeşitli fiziksel koşullarda üretilmiş, gölge ve perspektif bozukluğu bulunduran ham görüntüleri işlemekte yetersiz olduğunu açıkça göstermektedir.
+
+\subsection{Önerilen Çözümün Özgün Katkıları}
+
+Optik Form Doğrulama Sistemi (OFDS), mevcut çalışmalardaki bu eksiklikleri gidermek amacıyla tasarlanmıştır. Sistemin özgün katkıları birbirine bağlı dört temel boyutta ele alınabilir.
+
+Birinci özgün katkı, sınav anından başlayan uçtan uca güven zinciridir. Mevcut blokzincir tabanlı akademik kayıt sistemleri diploma ve sertifika yönetimine, yani sürecin çıktısına odaklanmaktadır \cite{grather2018, rani2024, berrios2025}. Pandey ve arkadaşlarının Springer LNNS serisi kapsamında yayımladığı çalışma, blokzincir tabanlı sertifika değiştirilemezliği için kapsamlı bir çerçeve sunmakla birlikte sınav sürecinin ham veri üretim aşamasını kapsam dışında bırakmaktadır \cite{pandey2024}. Tan-Vo ve arkadaşlarının IEEE Access'te yayımlanan çalışması, sertifika yönetimi ve iptal süreçlerinde Optimistic Rollups ve makine öğrenmesini birleştirerek yüzde altmış iki civarında gecikme ve maliyet azalması sağlamış olsa da bu sistem de sürecin başlangıç noktasını değil, mevcut bir dijital sertifika altyapısını varsaymaktadır \cite{tanvo2024}. OFDS ise güven zincirini sınav bitiminin hemen ardından öğrencinin gözü önünde başlatmaktadır. Optik formun görüntüsü alınır, işlenir ve kriptografik olarak mühürlenerek blokzincire kaydedilir. Bu sayede sürecin başından sonuna kadar her adım matematiksel olarak doğrulanabilir hâle gelmektedir.
+
+İkinci özgün katkı, uyarlanabilir görüntü işleme boru hattıdır. Literatürde optik form okuma yaklaşımları büyük ölçüde kontrollü aydınlatma ve standart baskı kalitesi varsaymaktadır \cite{elias2021omr}. OFDS'nin görüntü işleme modülü ise gerçek sınav ortamlarındaki olumsuz koşulları öngörerek tasarlanmıştır. ITU-R BT.601 standardına uygun lüminesans dönüşümü ile renk bilgisi atılır, $5\times 5$ Gauss konvolüsyonu ile piksel gürültüsü yok edilir ve Otsu'nun 1979'da önerdiği adaptif eşikleme yöntemi \cite{otsu1979} ile görüntünün kendi histogram dağılımından en uygun eşik değeri otomatik hesaplanır. Bu yaklaşım; sabit eşik değeri kullanan geleneksel yöntemlerin başarısız olduğu düşük kontrastlı, gölgeli ya da kırışık form görüntülerinde de tutarlı sonuçlar üretmektedir. Izgara hücresi eşlemesi ve doluluk oranı hesabına dayanan OMR (Optik İşaret Tanıma) sistemi, her soru için işaretli şıkkı piksel yoğunluğu analizine göre otomatik olarak belirlemekte; boş bırakılan ve çoklu işaretlenen sorular ise ayrı durum kodlarıyla işaretlenmektedir.
+
+Üçüncü özgün katkı, KVKK uyumlu kriptografik anonimleştirme mimarisidir. Polygon PoS ağı herkese açık bir blokzincir ağı olduğundan zincire yazılan veriler prensipte tüm ağ katılımcıları tarafından görüntülenebilmektedir. Bu durum, 6698 sayılı KVKK'nın anonimleştirme ilkesiyle doğrudan çelişmektedir \cite{kvkk_anonim}. OFDS, bu çelişkiyi öğrenci numarasını doğrudan zincire yazmak yerine SHA-256 özet fonksiyonu sayesinde kuruma özgü bir tuz değeriyle türetilmiş anonim bir anahtar üretmek yöntemiyle gidermektedir. Zincire yalnızca bu anahtar değer, IPFS CID değeri ve zaman damgası yazılmaktadır. Yetkili kurum kendi tuz değeriyle kaydı her zaman doğrulayabilirken tuz değerine sahip olmayan taraflar gerçek kimliği geri elde edememektedir. Berrios Moya ve arkadaşlarının MDPI Sensors dergisinde yayımladığı ZKBAR-V sistemi, sıfır bilgi ispatı kullanarak benzer bir gizlilik amacını farklı bir kriptografik sistemle gerçekleştirmektedir \cite{berrios2025}; ancak zkEVM tabanlı bu yaklaşımın kurumsal benimseme maliyeti ve teknik karmaşıklığı göz önüne alındığında OFDS'nin SHA-256 tabanlı tasarımı, mevcut Türk eğitim altyapısıyla çok daha doğrudan uyumlanabilme potansiyeli taşımaktadır.
+
+Dördüncü özgün katkı, çevrimdışı dayanıklılık mimarisinin sisteme entegrasyonudur. Sınav ortamlarında internet bağlantısının sürekliliği garanti edilemez. Mevcut blokzincir tabanlı çözümler bu kısıtı büyük ölçüde göz ardı etmekte, bulut servislerine ve internet bağlantısına anlık erişim gerektirmektedir. OFDS'nin SQLite tabanlı yerel kuyruk mekanizması, bağlantı kesintilerinde işlenmiş form verilerini PENDING durumunda güvenle saklamakta, bağlantı yeniden sağlandığında eşzamanlama servisi aracılığıyla bu kayıtları otomatik olarak Pinata/IPFS ve Polygon ağına aktarmaktadır. Her yerel kayıt SHA-256 ile imzalandığından, çevrimdışı dönemde biriken verinin bütünlüğü de kriptografik olarak korunmaktadır.
+
+\subsection{Mevcut Çözümlerden Ayrışma Noktaları}
+
+Blokzincir tabanlı akademik kayıt sistemleri üzerine yapılmış detaylı kıyaslamalı analizler incelendiğinde, OFDS'nin mevcut çözümlerden nasıl ayrıştığı somut biçimde görülebilmektedir. Chaudhari ve Shirole'nin sistematik derlemesinde sunulan karşılaştırma tablosu, incelenen kırk'ı aşkın sistemin hiçbirinin optik form okuma ile anlık blokzincir mühürlemeyi birleştiren bütünleşik bir mimariye sahip olmadığını göstermektedir \cite{chaudhari2025}. Blockcerts (MIT), BCdiploma, EduCTX ve benzeri sistemlerin tamamı, belgenin mevcut dijital biçimde var olduğunu varsaymakta; belgenin nasıl üretildiğini ve ham veri aşamasında bütünlüğünün nasıl korunduğunu kapsam dışında saymaktadır.
+
+Tan-Vo ve arkadaşlarının IEEE Access çalışmasında sunulan sistem karşılaştırma tablosu \cite{tanvo2024}, Layer-2 çözümü ve ML/AI entegrasyonunu bir arada sunan ilk sistem olma özelliğiyle öne çıkmaktadır; ancak bu tabloda da sınav süreci yönetimi ve optik form doğrulama başlıklarını ele alan herhangi bir sistem yer almamaktadır. Rani ve arkadaşlarının 2017-2023 yılları arasındaki sekiz akademik veritabanını PRISMA metodolojisiyle tarayan sistematik derlemesi, 10.227 makaleden derlenen tespitlerle blokzincirin eğitimde sınav inceleme (examination review) uygulamalarında hâlâ büyük bir araştırma alanı bulunduğunu açıkça ortaya koymaktadır \cite{rani2024}. OFDS, doğrudan bu araştırma boşluğunu dolduracak şekilde konumlandırılmıştır.
+
+Projenin yerlilik boyutu da özgün katkılar arasında değerlendirilmelidir. Türkiye, blokzincir teknolojisinin büyük ölçüde kullanıcısı konumunda olup geliştirici tarafında yeterli derinliğe henüz ulaşamamıştır. Merkezi sınav sistemlerinin altyapısına özgü bir çözüm olarak tasarlanan OFDS, uluslararası sistemlerin Türkiye'ye uyarlanmasından ziyade ülkemizin somut gereksinimleri esas alınarak sıfırdan geliştirilmiş yerli ve özgün bir mimariyi temsil etmektedir. Bu özellik, projenin yalnızca teknik değil aynı zamanda stratejik bir katma değer taşıdığını göstermektedir.
+
+% ============================================================
+\section{Teknoloji Kullanımı ve Sistem Mimarisi}
+% ============================================================
+
+Bu projede geliştirilen sistem; optik sınav formlarını dijital bir ortama aktaran, bu formları kriptografik yöntemlerle değiştirilemez hâle getiren ve tüm bu işlem kayıtlarını blokzincire yazdıran bütünleşik bir yazılım mimarisidir. Temel amaç, sınav sonuçlarının tek bir yetkili kişi ya da kurumun kontrolünde olduğu merkezi sistemlerin getirdiği güven açıklarını tümüyle ortadan kaldırmaktır. Eğitim alanında belge sahteciliği ve kayıt manipülasyonu küresel ölçekte ciddi bir sorundur. Bu durum, şeffaf ve değiştirilemez kayıt sistemlerine olan ihtiyacı güçlü biçimde ortaya koyar~\cite{grather2018}.
+
+Sistemin çalışma mantığı altı ana adımda özetlenebilir: \textbf{(1)}~Kullanıcı arayüzü üzerinden yalnızca optik form fotoğrafı alınır, \textbf{(2)}~sunucu veriyi karşılar ve işlem sırasına koyar, \textbf{(3)}~görüntü işleme algoritmaları sayesinde optik form temizlenir ve TC kimlik numarası ile isim OMR yöntemiyle kodlanmış alandan okunur, \textbf{(4)}~temizlenmiş görüntü merkeziyetsiz bir dosya ağına yüklenerek benzersiz bir parmak izi elde edilir, \textbf{(5)}~elde edilen bu veriler dijital imzayla blokzincire kaydedilir, \textbf{(6)}~kullanıcıya doğrulanabilir bir işlem makbuzu sunulur.
+
+% ŞEKİL 1
+\begin{figure}[H]
+\centering
+\dkutu{2.8cm}{\textbf{1. ARAYÜZ}\\[3pt]HTML Form\\Fotoğraf}%
+\;$\rightarrow$\;%
+\dkutu{2.8cm}{\textbf{2. FLASK}\\[3pt]Sunucu\\Veriyi Yakala}%
+\;$\rightarrow$\;%
+\dkutu{2.8cm}{\textbf{3. OMR+OpenCV}\\[3pt]Temizle/Binarize\\Verileri Oku}%
+
+\vspace{10pt}
+\makebox[\linewidth][r]{\hspace{1.6cm}$\downarrow$\hspace{4.1cm}}
+\vspace{1pt}
+
+\dkutu{2.8cm}{\textbf{6. SONUÇ}\\[3pt]Başarı Sayfası\\TX Hash}%
+\;$\leftarrow$\;%
+\dkutu{2.8cm}{\textbf{5. BLOCKCHAIN}\\[3pt]İmzala + Yaz}%
+\;$\leftarrow$\;%
+\dkutu{2.8cm}{\textbf{4. IPFS}\\[3pt]Pinata'ya Yükle\\CID Al}%
+
+\caption{Sistemin uçtan uca veri akışı: HTML arayüzünden blokzincir tescil kaydına.}
+\end{figure}
+
+% ============================================================
+\subsection{Kullanılan Teknolojiler ve Kütüphaneler}
+% ============================================================
+
+Proje, birden fazla katmanda farklı programlama dilleri ve kütüphaneler kullanılarak geliştirilmiştir. Her katman belirli bir işlev için özelleştirilmiş araçlardan oluşur. Ayrıca Bu araçlar birbirleriyle uyumlu biçimde çalışarak sistemi bir bütün hâline getirmektedir.
+
+\begin{table}[H]
+\centering
+\caption{Proje Katmanları ve Kullanılan Teknoloji Yığını}
+\begin{tabular}{@{}p{3.2cm}p{3.5cm}p{7cm}@{}}
+\toprule
+\textbf{Katman} & \textbf{Teknoloji} & \textbf{Kullanım Amacı} \\ \midrule
+Kullanıcı Arayüzü      & HTML5 / CSS3            & Optik form fotoğrafı alma \\
+Sunucu (Backend)       & Python / Flask          & Gelen veriyi işleyip modüllere yönlendirme \\
+Görüntü İşleme ve OMR  & OpenCV / NumPy          & Optik formu temizleme, ikili matrise dönüştürme ve verileri okuma \\
+Dosya Depolama         & IPFS / Pinata API       & Görüntüyü merkeziyetsiz ağa yükleme, CID alma \\
+Blokzincir             & Web3.py / Solidity      & Veriyi dijital imzayla Polygon ağına kaydetme \\
+Gizli Anahtar Yönetimi & python-dotenv           & API anahtarları ve özel anahtar izolasyonu \\
+Blokzincir Köprüsü     & Alchemy                 & Polygon Testnet ağına bağlantı sağlama \\
+Cüzdan / İmzalama      & MetaMask                & Özel anahtar ile işlem imzalama \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\subsection{Kullanıcı Arayüzü ve Veri İletimi (HTML / Flask)}
+% ============================================================
+
+Sistem, kullanıcının bir web tarayıcısı üzerinden erişebildiği sade bir HTML arayüzüyle başlar. Kurumda yetkili olan kişi bu ekranda sadece optik fotoğrafın formunu girer. TC kimlik numarası ve isim bilgisi optik forma kodlanmış baloncuklardan OMR yöntemiyle otomatik olarak okunur ve kullanıcının herhangi bir kimlik bilgisi girmesi gerekmemektedir. İşlem butonuna basıldığında tarayıcı, görüntü dosyasını arka uç sunucusuna gönderir.
+
+\subsubsection{Veri Paketleme: multipart/form-data}
+
+Görüntü dosyasının kayıpsız biçimde iletilebilmesi için \texttt{multipart/form-data} kodlama yöntemi kullanılmaktadır~\cite{rfc7578}. Bu yöntem, gönderilecek içerikleri her biri kendi sınırıyla ayrılmış olan parçalara böler. Bu sayede sunucu tarafı hangi verinin binary dosya olduğunu ayırır.
+
+\subsubsection{Flask ile Sunucu Orkestrasyonu}
+
+Python tabanlı \textbf{Flask} yapısı, gelen HTTP isteğini karşılamaktan tüm modüllerin sıraya konulmasına kadar olan operasyonları üstlenmektedir~\cite{flask2024}. Sunucuya ulaşan istek, ana orkestrasyon modülüyle yakalanır. Sonrasında dosya nesnesi aracılığıyla görüntü verisi alınarak geçici bir tampona kaydedilir ve doğrudan görüntü işleme modülüne iletilir.
+
+Sisteme ait API anahtarları ve özel blokzincir anahtarı kaynak kodun içine kesinlikle yazılmaz. \textbf{python-dotenv} kütüphanesi bu değerleri yalnızca tam olarak sunucu çalıştığı anda belleğe yükler. Böylece gizli bilgiler asla kaynak kodda görünmez ve dışarıya sızmaz~\cite{dotenv2024}.
+
+% ŞEKİL 2
+\begin{figure}[H]
+\centering
+\fbox{%
+  \begin{minipage}[c][3cm][c]{5.2cm}
+    \centering\small
+    \textbf{TARAYICI (İstemci)}\\[6pt]
+    Dosya: optik.jpg\\[6pt]
+    \textit{multipart/form-data} ile paketlenir
+  \end{minipage}%
+}%
+\quad$\xrightarrow{\text{HTTP POST}}$\quad%
+\fbox{%
+  \begin{minipage}[c][3cm][c]{5.2cm}
+    \centering\small
+    \textbf{FLASK SUNUCU}\\[6pt]
+    Görüntü verisi alınır\\[6pt]
+    Geçici tampona kaydedilir\\
+    Görüntü modülüne iletilir
+  \end{minipage}%
+}
+\caption{HTML arayüzünden Flask sunucusuna veri iletimi akışı.}
+\end{figure}
+
+% ============================================================
+\subsection{Görüntü İşleme: Optik Formu Temizleme (OpenCV / NumPy)}
+% ============================================================
+
+Fiziksel bir optik formun fotoğrafı her zaman ideal koşullarda çekilmez. Gölgeler, hafif eğimler, kâğıdın kırışıklığı ve ışık farklılıkları formun doğru okunmasını zorlaştırır. Sistemin görüntü işleme modülü; \textbf{OpenCV} ve \textbf{NumPy} kütüphaneleri kullanılarak bu sorunları adım adım çözer ve ham fotoğrafı yalnızca siyah ve beyaz piksellerden oluşan temiz bir matrise dönüştürür~\cite{opencv2024}. Bu dönüşüm süreci üç sıralı adımdan oluşmaktadır.
+
+\subsubsection{Adım 1 — Renk Bilgisini Atma (Gri Tonlamaya Geçiş)}
+
+Kameradan gelen renkli görüntü; kırmızı (R), yeşil (G) ve mavi (B) kanallarından oluşan üç katmanlı bir piksel matrisidir. Optik form okuma görevi için renk bilgisi gereksizdir; önemli olan yalnızca açık-koyu kontrasttır. Bu nedenle görüntü, ITU-R BT.601 standardında tanımlanan ağırlıklı dönüşüm formülü ile tek kanallı gri tonlamalı bir adet görüntüye indirgenir~\cite{itu2011}:
+
+\begin{equation}
+Y = 0{,}299 \cdot R + 0{,}587 \cdot G + 0{,}114 \cdot B
+\end{equation}
+
+Bu formülde insan gözünün yeşile daha duyarlı olması nedeniyle yeşil kanal en yüksek katsayıyı (\%58,7) almaktadır. Bu adım aynı zamanda görüntünün veri boyutunu üçte bir oranında azaltarak sonraki işlemleri hızlandırır.
+
+\subsubsection{Adım 2 — Gürültü Temizleme (Gauss Filtresi)}
+
+Dijital fotoğraflarda düşük çözünürlük veya dosya sıkıştırmasından kaynaklanan ince piksel dalgalanmaları (gürültü) bulunabilir. Bu gürültüler üzerinden doğrudan eşikleme yapılırsa yanlış sonuçlar elde edilir. Bunu önlemek için $5 \times 5$ boyutunda bir Gauss filtresi ile konvolüsyon işlemi uygulanır. Gauss filtresi her pikselin değerini, etrafındaki komşu piksellerin ağırlıklı ortalamasıyla günceller~\cite{opencv2024}:
+
+\begin{equation}
+G(x,y) = \frac{1}{2\pi\sigma^2}\, e^{\,-\dfrac{x^2+y^2}{2\sigma^2}}
+\end{equation}
+
+Pratik netice olarak görüntü hafifçe yumuşatılır; gerçek siyah/beyaz sınırlar korunurken rastgele gürültü bileşenleri bastırılır.
+
+\subsubsection{Adım 3 — İkili Forma Dönüştürme (Otsu Eşikleme)}
+
+Son adımda, gürültüsü giderilmiş gri görüntü tamamen siyah-beyaz (ikili/binary) hâle getirilir. Bunun için N. Otsu'nun 1979 tarihli çalışmasında önerilen adaptif eşikleme yöntemi kullanılmaktadır~\cite{otsu1979}. Bu yöntemin temel avantajı şudur: sabit bir eşik değeri kullanmak yerine, görüntünün kendi histogram dağılımına bakar ve sonra en uygun eşik değerini otomatik hesaplar. Böylece aynı algoritma hem parlak hem de karanlık ortamda çekilmiş formlar için tutarlı biçimde çalışır.
+
+Otsu yöntemi, arka plan ve ön plan pikselleri arasındaki \textbf{sınıflar arası varyansı maksimize eden} eşik değeri $t^{*}$'yı arar:
+
+\begin{equation}
+t^{*} = \arg\max_{t}\; \omega_{\mathrm{bg}}(t)\cdot\omega_{\mathrm{fg}}(t)\cdot\bigl[\mu_{\mathrm{bg}}(t) - \mu_{\mathrm{fg}}(t)\bigr]^2
+\end{equation}
+
+Burada $\omega$ değerleri iki sınıfın görüntü içindeki oranlarını, $\mu$ değerleriyse her sınıfın ortalama parlaklığını ifade eder. İşlem tamamlandığında her piksel ya $0$ (siyah --- işaretli bölge) ya da $255$ (beyaz --- boş bölge) değerine atanmış olur. Sonuç; gölgesiz ve tertemiz bir optik form matrisidir.
+
+\begin{table}[H]
+\centering
+\caption{Görüntü İşleme Adımları ve Dönüşüm Sonuçları}
+\begin{tabular}{@{}p{3.5cm}p{4.5cm}p{5.5cm}@{}}
+\toprule
+\textbf{İşlem} & \textbf{Kullanılan Algoritma} & \textbf{Dönüşüm Çıktısı} \\ \midrule
+Gri Tonlamaya Geçiş & Lüminesans Dönüşümü (ITU-R BT.601) & 3 kanallı matris $\to$ 1 kanallı gri matris \\
+Gürültü Azaltma     & Gauss Konvolüsyonu ($5{\times}5$)   & Yumuşatılmış gri matris \\
+İkili Dönüşüm       & Otsu Adaptif Eşikleme              & Her piksel 0 veya 255 değeri alır \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ŞEKİL 3
+\begin{figure}[H]
+\centering
+\fbox{%
+  \begin{minipage}[c][2.7cm][c]{2.7cm}
+    \centering\small
+    \textbf{Ham Fotoğraf}\\[4pt]
+    Renkli, gölgeli\\
+    3 kanal (R, G, B)
+  \end{minipage}%
+}\;$\rightarrow$\;%
+\fbox{%
+  \begin{minipage}[c][2.7cm][c]{2.7cm}
+    \centering\small
+    \textbf{Gri Tonlama}\\[4pt]
+    $Y{=}0.299R$\\
+    $+\,0.587G$\\
+    $+\,0.114B$
+  \end{minipage}%
+}\;$\rightarrow$\;%
+\fbox{%
+  \begin{minipage}[c][2.7cm][c]{2.7cm}
+    \centering\small
+    \textbf{Gauss Filtresi}\\[4pt]
+    $5{\times}5$ çekirdek\\[2pt]
+    Gürültü azaltma
+  \end{minipage}%
+}\;$\rightarrow$\;%
+\fbox{%
+  \begin{minipage}[c][2.7cm][c]{2.7cm}
+    \centering\small
+    \textbf{Otsu Eşikleme}\\[4pt]
+    Sadece 0 veya 255\\[2pt]
+    Net ikili matris
+  \end{minipage}%
+}
+\caption{Ham kamera görüntüsünden temiz optik form matrisine üç adımlı görüntü işleme ardışık düzeni.}
+\end{figure}
+
+% ============================================================
+\subsection{Optik İşaret Tanıma: Izgara Sistemi ve Karar Mekanizması}
+% ============================================================
+
+İkili matris elde edildikten sonra sistemin bir sonraki görevi ise hangi şıkların işaretlendiğini ve kodlanmış kimlik/isim bilgilerini otomatik olarak belirlemektir. Bu aşama iki adet ana alt bölümden oluşmaktadır: referans noktalarının tespiti ve ızgara hücrelerinin siyah piksel yoğunluğuna göre değerlendirilmesidir. Piksel yoğunluğu tabanlı optik işaret tanıma yöntemi, literatürde yaygın biçimde kullanılan ve yüksek doğruluk oranları kazandıran temel bir yaklaşım olarak kabul görmektedir~\cite{elias2021omr}.
+
+\subsubsection{Adım 4 — Kontur Tespiti ve Referans Noktaları}
+
+Optik formun köşelerinde bulunan referans işaretçileri, formun eğik veya farklı uzaklıkta çekilmiş olsa bile koordinat sisteminin doğru kurulmasını sağlar. Bu işaretçiler OpenCV'nin \texttt{findContours} fonksiyonu ile tespit edilir~\cite{opencv_contours}. Kontur tespiti, ikili matristeki birbirine bağlanmış siyah piksel kümelerini kapalı bölgeler olarak tanımlar ve her bölgenin sınır koordinatlarını döndürür. Referans işaretçileri belirli bir alan ve en-boy oranı eşiğini sağlayan konturlar arasından seçilir:
+
+\begin{equation}
+\text{İşaretçi Skoru} = \frac{\text{Dolu Alan}}{\text{Sınırlayıcı Kutu Alanı}} \geq \theta_{\text{ref}}
+\end{equation}
+
+Burada $\theta_{\text{ref}}$ deneysel olarak belirlenmiş bir doluluk eşiğidir. Dört köşe referans noktası belirlendikten sonra perspektif düzeltmesi uygulanmış formun kesin koordinatları elde edilir.
+
+\subsubsection{Adım 5 — Izgara Hücresi Eşlemesi ve Cevap Kararı}
+
+Referans noktaları belirlendikten sonra form üzerindeki her kodlama alanı (soru şıkları, TC kimlik ve isim haneleri) bir ızgara hücresiyle $(r, c)$ eşlenir; burada $r$ hücre numarasını, $c$ ise indeksini temsil eder. Her hücrenin piksel koordinatları şu şekilde hesaplanır:
+
+\begin{equation}
+x_{r,c} = x_0 + c \cdot \Delta x, \qquad y_{r,c} = y_0 + r \cdot \Delta y
+\end{equation}
+
+Burada $(x_0, y_0)$ ilk hücrenin sol üst köşesi, $\Delta x$ ve $\Delta y$ ise yatay ve dikey hücre adımlarıdır. Her hücre içindeki siyah piksel sayısının toplam hücre piksel sayısına oranı \textbf{doluluk oranı} olarak tanımlanır~\cite{elias2021omr}:
+
+\begin{equation}
+\rho_{r,c} = \frac{\displaystyle\sum_{(x,y)\,\in\,H_{r,c}} \mathbf{1}[I(x,y)=0]}{W_h \times H_h}
+\end{equation}
+
+Burada $H_{r,c}$ ilgili hücrenin piksel kümesini, $W_h$ ve $H_h$ hücrenin genişlik ve yüksekliğini, $I(x,y)$ ise ikili matristeki piksel değerini göstermektedir. Bir alan için işaretli şık, doluluk oranı belirlenmiş bir karar eşiğini $\theta_d$ aşan hücre olarak belirlenir:
+
+\begin{equation}
+\hat{c}_r = \arg\max_{c}\; \rho_{r,c}, \quad \text{geçerli ise} \quad \rho_{r,\hat{c}_r} \geq \theta_d
+\end{equation}
+
+Hiçbir hücre eşiği aşmıyorsa alan boş bırakılmış, birden fazla hücre eşiği geçiyorsa geçersiz işaretlenmiş kabul edilir. Sonuç olarak kimlik bilgileri ve her soruya ait şık bilgisi bir dizi hâlinde elde edilir ve bu dizi IPFS yükleme ile blokzincir mühürleme adımlarına iletilir.
+
+\begin{table}[H]
+\centering
+\caption{OMR Karar Mekanizması Aşamaları}
+\begin{tabular}{@{}p{3.5cm}p{4cm}p{6cm}@{}}
+\toprule
+\textbf{Aşama} & \textbf{Yöntem} & \textbf{Çıktı} \\ \midrule
+Kontur Tespiti  & findContours (OpenCV)           & Referans işaretçi koordinatları \\
+Izgara Eşlemesi & Denklem (5)--(6)                & Her hücrenin $(x,y)$ koordinatları \\
+Doluluk Hesabı  & Siyah piksel oranı (Denklem 7)  & $\rho_{r,c}$ matrisi \\
+Cevap Kararı    & Eşik $\theta_d$ (Denklem 8)     & Veri dizisi (A/B/C/D/E veya Boş) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\subsection{Merkeziyetsiz Dosya Depolama (IPFS / Pinata)}
+% ============================================================
+
+Temizlenmiş optik form görüntüsünün güvenilir ve değiştirilemez biçimde saklanması için \textbf{IPFS (InterPlanetary File System)} protokolü kullanılmaktadır. IPFS, dosyaları merkezi bir sunucuda tutmak yerine birbirine bağlı binlerce düğümden oluşan dağıtık bir ağa yayar~\cite{benet2014}. Bu tutum tek bir sunucunun kapanması veya saldırıya uğramasıyla tüm verilerin kaybolduğu tek nokta hatası (Single Point of Failure) riskini kaldırır.
+
+\subsubsection{İçerik Tabanlı Adresleme ve CID}
+
+Geleneksel sistemlerde bir dosyaya bir web adresi (URL) ile ulaşılır; bu adres dosyanın \textit{nerede} olduğunu gösterir, ancak içeriğinin değişip değişmediğini söylemez. IPFS'de ise tam aksi bir mantık geçerlidir: dosyanın tüm içeriği SHA-256 özet fonksiyonuna girilerek eşsiz bir \textbf{CID (Content Identifier)} üretilir. Bu CID, dosyanın dijital parmak izidir~\cite{benet2014}:
+
+\begin{equation}
+\text{CID} = \text{SHA-256}\bigl(\text{dosya içeriği}\bigr)
+\end{equation}
+
+SHA-256'nın en önemli özelliği \textit{çığ etkisi}dir: dosya içeriğinde yapılan tek bir bitlik değişiklik dahi tamamen farklı bir özet üretir. Bu sebeple blokzincire kaydedilen CID değeri, optik formun hiçbir zaman değiştirilmediğinin matematiksel kanıtı olur.
+
+\subsubsection{Pinata API Entegrasyonu}
+
+IPFS ağına bağlanmak için kendi düğümünü işletmek teknik karmaşıklık yaratır. Bunun yerine projemizde \textbf{Pinata} bulut servisi kullanılmaktadır~\cite{pinata2024}. Python'daki \texttt{requests} kütüphanesi ile Pinata'nın REST API'sine bir istek gönderilir; Pinata dosyayı IPFS ağına dağıtır ve karşılığında CID kodunu döner.
+
+\begin{table}[H]
+\centering
+\caption{Merkezi Sunucu ile IPFS'in Karşılaştırmalı Özeti}
+\begin{tabular}{@{}p{3.8cm}p{5cm}p{5cm}@{}}
+\toprule
+\textbf{Özellik} & \textbf{Klasik Merkezi Sunucu} & \textbf{IPFS} \\ \midrule
+Dosyaya Erişim            & URL (konum tabanlı)      & CID (içerik tabanlı) \\
+Veri Değiştirilebilir mi? & Evet, yönetici isterse   & Hayır, CID değişir \\
+Sunucu Çökerse Ne Olur?   & Veri kaybolabilir        & Diğer düğümler devam eder \\
+Bütünlük Kontrolü         & Manuel doğrulama         & Kriptografik, otomatik \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\subsection{Çevrimdışı Tampon: SQLite Tabanlı Yerel Kuyruk}
+% ============================================================
+
+Pinata ve Alchemy benzeri bulut servisleri ile Polygon ağı, çalışabilmek için internet bağlantısı gerektirmektedir. Sınav ortamlarında internete erişimin kesintiye uğrayabileceği gözümüzün önünde bulundurduğumuzda, sistemin bu bağımlılığa karşı dayanıklı olması kritik bir güvenilirlik koşulu olmaktadır. Bu nedenle sistem internet bağlantısı olmadığında verileri yerel bir \textbf{SQLite} veritabanına kaydeden, bağlantı yeniden sağlandığındaysa bu kayıtları otomatik olarak işleyen bir \textbf{çevrimdışı tampon katmanı} içermektedir~\cite{sqlite2024,python_sqlite2024,sqlite_academic}.
+
+\subsubsection{Yerel Depolama ve Bütünlük Koruması}
+
+Görüntü işleme ve OMR aşamalarını tamamlamanın ardından elde edilen veriler (anonimleştirilmiş $k$ anahtarı, cevap dizisi ve işlenmiş görüntü) önce yerel SQLite veritabanına yazılır. Bu aşamada veri bütünlüğünü korumak için kayıt, SHA-256 ile özetlenerek imzalanır ve veritabanında \texttt{PENDING} durumuyla saklanır:
+
+\begin{equation}
+h_{\text{local}} = \text{SHA-256}(k \,\|\, \text{cevap\_dizisi} \,\|\, \text{görüntü\_hash})
+\end{equation}
+
+Burada $\|$ birleştirme operatörünü ifade eder. TC kimlik numarası ve isim bilgisi bu esnada veritabanına yazılmaz. Sadece anonimleştirme adımında türetilmiş olan $k$ anahtarı saklanır. Bu yerel hash değeri, ileride blokzincire yazılacak verinin değiştirilmediğini doğrulamak için kullanılır.
+
+\subsubsection{Otomatik Senkronizasyon}
+
+Sistem arka planda periyodik olarak internet bağlantısını kontrol eden bir \textbf{senkronizasyon servisi} çalıştırır. Bağlantı bulununca, veritabanındaki \texttt{PENDING} durumundaki kayıtlar sırayla işlenerek ilk olarak Pinata aracılığıyla IPFS'e yüklenir, arkasından Polygon ağına mühürlenir. İşlem başarıyla tamamlanan kayıtların durumu \texttt{SYNCED} olarak güncellenir. Herhangi bir ara adımda hata oluşması durumunda kayıt \texttt{FAILED} durumuna alınır ve yeniden deneme kuyruğuna eklenir.
+
+\begin{table}[H]
+\centering
+\caption{Çevrimdışı Tampon Kayıt Durumları}
+\begin{tabular}{@{}p{2.8cm}p{4cm}p{7cm}@{}}
+\toprule
+\textbf{Durum} & \textbf{Tetikleyici} & \textbf{Anlam} \\ \midrule
+\texttt{PENDING}  & OMR tamamlandı       & Yerel kaydedildi, internet bekleniyor \\
+\texttt{SYNCING}  & Bağlantı tespit edildi & IPFS ve blokzincir işlemi sürüyor \\
+\texttt{SYNCED}   & TX Hash alındı        & Blokzincire başarıyla mühürlendi \\
+\texttt{FAILED}   & Hata oluştu           & Yeniden deneme kuyruğunda \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Bu mimari sayesinde sistem; internet bağlantısı olmadan sınav verilerini güvenle toplamaya devam edebilir, bağlantı sağlandığında ise verilerin blokzincire eksiksiz ve sıralı biçimde aktarılması otomatik olarak gerçekleşmektedir.
+
+% ============================================================
+\subsection{Blokzincir Entegrasyonu ve Dijital Noterleme (Web3.py / Polygon)}
+% ============================================================
+
+Sistemin en önemli adımı; sınava ait bütün verilerin bir blokzincir ağına dijital imzayla mühürlenmesidir. Bu işlem tamamlandığında oluşan kayıt; silinmesi, değiştirilmesi veya geri alınması mümkün olmayan kalıcı bir tescil belgesi niteliği taşır~\cite{wood2014}. Blokzincir teknolojisinin eğitim alanındaki bu tür kayıt güvencesi uygulamaları akademik çevrelerde de giderek artan ilgi görmektedir~\cite{grather2018}.
+
+\subsubsection{Neden Polygon?}
+
+Ethereum, en yaygın akıllı sözleşme ağlarından biridir; ancak her işlem için alınan ücretler (gas fee) ve işlem hızı küçük bütçeli projeler için bazen engelleyici olabilir. \textbf{Polygon PoS}, Ethereum ile tam uyumlu çalışan ve işlem başına maliyeti çok daha düşük tutan bir yan zincir (sidechain) ağıdır~\cite{polygon2024}. Projemizde geliştirme ve test aşaması için Polygon Testnet kullanılmaktadır; bu ağda gerçek para harcanmadan işlemler gerçekleştirilebilir.
+
+\subsubsection{Veri Gizliliği ve KVKK Uyumluluğu}
+
+Polygon PoS, herkese açık (public) bir blokzincir ağıdır; bu nedenle zincire yazılan veriler prensipte herkes tarafından görülebilir. TC kimlik numarası ve isim bilgisi, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında kişiyi doğrudan tanımlayan kişisel veri niteliği taşımaktadır~\cite{kvkk6698}. Sınav sonuçları ile birleştirildiğinde bu veriler kişisel veri işleme faaliyeti oluşturmaktadır. Bu yüzden açık metin (plaintext) olarak blokzincire yazılmaları Kanun'un anonimleştirme ilkesiyle bağdaşmamaktadır~\cite{kvkk_anonim}.
+
+Bu sorunu çözmek için sistemde kişisel veriler blokzincire doğrudan yazılmamakta; bunun yerine her kayıt için kriptografik bir anonimleştirme işlemi uygulanmaktadır. OMR ile elde edilen TC kimlik numarası ve isim, sınav tarihi ve kuruma özgü gizli bir tuz (salt) değeri birleştirilerek SHA-256 özet fonksiyonundan geçirilir:
+
+\begin{equation}
+k = \text{SHA-256}(\text{TC} \,\|\, \text{isim\_normalize} \,\|\, \text{tarih} \,\|\, \text{kurum\_tuzu})
+\end{equation}
+
+Zincire yalnızca bu $k$ anahtarı yazılır; TC numarası ve isim hiçbir zaman zincirde yer almaz. Yetkili kurum, kendi elindeki tuz değeriyle $k$'yı yeniden hesaplayarak kaydı doğrulayabilir; ancak tuz değerine sahip olmayan üçüncü taraflar $k$'dan gerçek kimliği geri elde edemez. SHA-256 tek yönlü bir fonksiyon olduğundan tersine mühendislik yoluyla TC veya isim bilgisine ulaşmak hesaplama açısından mümkün değildir~\cite{nist_sha2015}.
+
+\subsubsection{Akıllı Sözleşme Mimarisi (Solidity)}
+
+Blokzincir üzerindeki mantık, \textbf{Solidity} dili ile yazılmış bir \textit{akıllı sözleşme} içinde barınmaktadır~\cite{solidity2024}. Projemizdeki sözleşme, kayıtları \texttt{mapping(bytes32 => Record)} veri yapısıyla tutar; burada anahtar, yukarıdaki $k$ değeri, \texttt{Record} struct'ı ise IPFS CID, zaman damgası (timestamp) ve doğrulayıcı cüzdan adresini içerir:
+
+\begin{verbatim}
+struct Record {
+    string  ipfsCID;
+    uint256 timestamp;
+    address verifier;
+}
+mapping(bytes32 => Record) private records;
+\end{verbatim}
+
+Sözleşme iki temel işlev içerir: \texttt{addRecord} işlevi yalnızca sözleşme sahibi (kurum cüzdanı) tarafından çağrılabilir ve kayıt oluşturulduğunda \texttt{RecordCreated} olayını (event) zincire yayınlar; \texttt{getRecord} işlevi ise herhangi bir dış tarafın $k$ anahtarını vererek kaydı sorgulamasına olanak tanır. Olay yayını sayesinde blok arayıcılar (block explorer) üzerinden işlem geçmişi şeffaf biçimde izlenebilir.
+
+\subsubsection{Gas Ücreti Yönetimi ve Kullanıcı Deneyimi}
+
+Polygon ağında her işlem küçük miktarda MATIC (yerel token) biçiminde gas ücreti gerektirir. Öğretmen veya öğrenci gibi son kullanıcıların cüzdan kurması, MATIC satın alması ve gas ücreti ödemesi beklenemez; bu durum kullanıcı deneyimini olumsuz etkiler.
+
+Bunu önlemek için sistemde \textbf{kurumsal aktarıcı (relayer)} modeli benimsenmiştir. Tüm blokzincir işlemleri, Flask sunucusunda \texttt{python-dotenv} ile korunan kurumun yetkili cüzdanı üzerinden gerçekleştirilir~\cite{dotenv2024}. Son kullanıcılar blokzincir altyapısıyla hiç muhatap olmaz; yalnızca HTML arayüzü üzerinden form yükler. Gelecekte sistemin ölçeklenmesi durumunda \textbf{ERC-4337 Hesap Soyutlama (Account Abstraction)} standardı benimsenerek gas ücretleri üçüncü taraf bir \textit{paymaster} sözleşmesi aracılığıyla karşılanabilir~\cite{eip4337}; bu sayede kurumun cüzdanındaki bakiye tükense bile hizmet sürekliliği sağlanabilir.
+
+\subsubsection{İşlem İmzalama ve Polygon Ağına Yazma}
+
+Verilerin blokzincire aktarılması, IPFS yükleme adımının tamamlanmasının ardından otomatik olarak başlayan dört adımlı bir süreçle gerçekleşir:
+
+\begin{enumerate}[leftmargin=1.5cm]
+    \item \textbf{Ağa Bağlanma:} \textbf{Web3.py} kütüphanesi~\cite{web3py2024}, \textbf{Alchemy} servisinin sağladığı uç nokta üzerinden Polygon Testnet ağına bağlanır.
+    \item \textbf{Veri Paketleme:} Anonimleştirilmiş $k$ anahtarı, IPFS CID değeri ve zaman damgası akıllı sözleşmenin beklediği formata uygun biçimde paketlenir.
+    \item \textbf{Dijital İmzalama:} İşlem paketi, kurumun yetkili cüzdanına ait özel anahtar ile yerel olarak imzalanır. Bu imza; işlemi gerçekleştirenin kesinlikle cüzdan sahibi olduğunu ve başka hiç kimsenin bu işlemi taklit edemeyeceğini matematiksel olarak kanıtlar~\cite{ecdsa2001}.
+    \item \textbf{Ağa Gönderme ve Onay:} İmzalı işlem Polygon ağına yayınlanır. Doğrulayıcı düğümler işlemi onaylar, \texttt{RecordCreated} olayı zincire işlenir ve bir \textbf{Transaction Hash (TX Hash)} üretilir~\cite{wood2014}. Bu kod, söz konusu sınav kaydının dünya üzerindeki tek ve değiştirilemez tescil numarasıdır; Polygonscan üzerinden bağımsız biçimde doğrulanabilir~\cite{polygon2024}.
+\end{enumerate}
+
+% ŞEKİL 4
+\begin{figure}[H]
+\centering
+\fbox{%
+  \begin{minipage}[c][2.8cm][c]{3.6cm}
+    \centering\small
+    \textbf{VERİ PAKETİ}\\[5pt]
+    $k$ anahtarı (TC+isim\\
+    hash'i)\\
+    Cevap dizisi\\
+    IPFS CID değeri
+  \end{minipage}%
+}\;$\xrightarrow{\text{İmzala}}$\;%
+\fbox{%
+  \begin{minipage}[c][2.8cm][c]{3.6cm}
+    \centering\small
+    \textbf{İMZALI İŞLEM}\\[5pt]
+    Özel anahtar ile\\
+    yerel imzalama\\
+    (MetaMask)
+  \end{minipage}%
+}\;$\xrightarrow{\text{Alchemy/RPC}}$\;%
+\fbox{%
+  \begin{minipage}[c][2.8cm][c]{3.6cm}
+    \centering\small
+    \textbf{POLYGON AĞI}\\[5pt]
+    Doğrulayıcılar\\
+    onaylar\\
+    TX Hash üretilir
+  \end{minipage}%
+}
+\caption{Veri paketinin dijital imzalanmasından Polygon ağı onayına blokzincir mühürleme akışı.}
+\end{figure}
+
+\subsubsection{İşlem Sonucu: Kullanıcıya Sunulan Makbuz}
+
+Tüm adımlar başarıyla bitirildiğinde Flask, kullanıcıya bir özet döner. Bu sayfada okunulan cevap şıkları, IPFS üzerindeki optik form görüntüsüne ait bağlantı ve Polygonscan üzerinde doğrulanabilecek TX Hash kodu yer alır. Kişisel veri gizliliği korunduğundan TC kimlik numarası ve isim bu sayfada açık metin olarak gösterilmez. Yalnızca yetkili olan kurum kendi tuz değeriyle $k$ anahtarını tekrardan hesaplayarak kaydın doğrulanmasını sağlayabilir.
+
+% ============================================================
+\subsection{Akıllı Sözleşme Güvenlik Analizi ve Test Planı}
+% ============================================================
+
+Bir akıllı sözleşme ağa yüklendikten sonra değiştirilememesi, güvenlik açıklarının önceden tespit edilmesini zorunlu kılar.. Ghaleb ve Pattabiraman (2020), statik analiz araçlarının  giriş tekrardan(reentrancy), tamsayı taşması ve erişim kontrolü açıkları gibi kritik zafiyetleri tespit etmedeki etkinliğini kapsamlı biçimde değerlendirmiş ve araçların birbirini tamamlayıcı nitelikte kullanılması gerektiğini ortaya koymuştur~\cite{ghaleb2020}. Bu bulgular doğrultusunda projemizde akıllı sözleşme güvenliği iki aşamalı olarak ele alınmaktadır.
+
+\subsubsection{Statik Analiz: Slither}
+
+\textbf{Slither}, Trail of Bits tarafından geliştirilen ve Solidity akıllı sözleşmelerini SlithIR adlı ara gösterim diline dönüştürerekten statik analiz uygulayan açık kaynaklı bir çerçevedir~\cite{feist2019slither}. Feist vd. (2019) tarafından gerçekleştirilen değerlendirmede Slither, en çok kullanılan 1.000 akıllı sözleşme üzerinde test edilmiştir. Ayrıca hız, sağlamlık ve yanlış pozitif dengesi açısından diğer statik analiz araçlarını geçerek en doğru araç olarak öne çıkmıştır~\cite{feist2019slither}. Projemizdeki akıllı sözleşme şu dört güvenlik kategorisi açısından Slither ile taranacaktır: yeniden giriş saldırıları (reentrancy), erişim kontrol açıkları, tamsayı taşması/yetersizliği ve tx.origin kimlik doğrulama hataları.
+
+\subsubsection{Planlanan Test Senaryoları}
+
+Statik analize ek olarak sistemin tamamına aşağıdaki test senaryoları uygulanacaktır:
+
+\begin{enumerate}[leftmargin=1.5cm]
+    \item \textbf{OMR Kimlik Doğruluk Testi:} Farklı aydınlatma koşullarında çekilmiş en az 50 optik form görüntüsü üzerinde kodlanmış TC ve isim okuma doğruluğu ölçülecektir. Hedef başarı oranı \%95 ve üstüdür.~\cite{elias2021omr}.
+    \item \textbf{OMR Doğruluk Testi:} Aynı görüntü seti üzerinde cevap okuma doğruluğu ölçülecek; hedef başarı oranı \%95 ve üzeridir.
+    \item \textbf{Çevrimdışı Tampon Testi:} İnternet bağlantısı kesilip yeniden sağlandığında SQLite kuyruğundaki kayıtların eksiksiz biçimde blokzincire iletildiği doğrulanacaktır.
+    \item \textbf{KVKK Anonimlik Testi:} Zincirdeki $k$ değerinden tuz değeri bilinmeden gerçek TC numarasına veya isim bilgisine ulaşılamadığı SHA-256 tersine mühendislik denemeleriyle teyitlenir.~\cite{nist_sha2015}.
+    \item \textbf{Sözleşme Bütünlük Testi:} Sadece yetkili kurum cüzdanının \texttt{addRecord} fonksiyonunu çağırabildiği ve de yetkisiz erişim girişimlerinin sözleşme tarafından reddedildiği Polygon Testnet üzerinde doğrulanacaktır.
+\end{enumerate}
+
+% ============================================================
+\subsection{Sistemin Geleceğe Uyum Kapasitesi}
+% ============================================================
+
+Sistem, mevcut gereksinimleri karşılamanın ötesinde ilerleyen gelişmelere ve değişen kurumsal gereksinimlere kolayca uyum sağlayabilecek biçimde tasarlanmıştır. Bu esneklik üç temel seviyede kendini göstermektedir.
+
+\subsubsection{Zincir Bağımsızlığı}
+
+Sistem, Polygon PoS üzerinde geliştirilmiştir ve EVM uyumlu herhangi bir ağa (BNB Chain, Avalanche C-Chain, Arbitrum vb.) minimum değişiklikle taşınabilir. Bunun temel sebebi, akıllı sözleşmenin standart Solidity ile yazılmış ve Ethereum Sanal Makinesi'nin (EVM) belirlediği arayüze uygun olmasıdır~\cite{belchior2023interop}. Belchior vd. (2023) tarafından gerçekleştirilen kapsamlı derleme çalışması, EVM uyumlu zincirler arası geçişin çarpraz zincir köprü (cross-chain bridge) ve atomik takas (atomic swap) protokolleriyle güvenli biçimde gerçekleştirilebildiğini gösterir~\cite{belchior2023interop}. Bu esneklik sayesinde sistem, ileride kurumların tercihine veya regülasyon ihtiyaçlarına göre farklı bir ağa geçiş yapabilir.
+
+\subsubsection{Farklı Form Formatlarına Adaptasyon}
+
+OMR modülündeki ızgara parametreleri ($x_0$, $y_0$, $\Delta x$, $\Delta y$) ve referans noktası konumları yapılandırma dosyasından okunmakta; bu sayede farklı soru sayısına, şık düzenine veya form boyutuna sahip optik formlar yazılım değişikliği gerekmeden desteklenebilmektedir.
+
+\subsubsection{Çoklu Kurum Desteği}
+
+Akıllı sözleşmedeki \texttt{onlyOwner} kısıtlaması, Solidity'nin çoklu imza (multi-sig) veya erişim kontrol kütüphaneleri (OpenZeppelin AccessControl) ile genişletilerek birden fazla kurumun yetkili işlem yapmasına olanak tanıyacak biçimde güncellenebilir~\cite{solidity2024}. Aynı zamanda SQLite offline tampon mimarisi, kurumsal ölçekte PostgreSQL gibi sunucu tabanlı bir veritabanıyla değiştirilebilir~\cite{sqlite_academic}.
+
+% ============================================================
+\section{Uygulanabilirlik}
+% ============================================================
+
+\subsection{Projenin Hayata Geçirilmesi ve Uygulama Planı}
+
+Proje, yüksek maliyetli ve ithal optik okuyucu cihazlarına olan bağımlılığı akıllı telefon ve web mimarsjileriyle aşmayı hedeflemektedir \cite{shi2016}. Sistemin hayata geçirilmesi için okulların ek bir donanım yatırımı yapması gerekmez; bulut tabanlı bir web platformu veya mobil uygulama üzerinden erişim sağlanması yeterlidir.
+
+\textbf{Mobil Cihaz Altyapısı:} Her akıllı telefon, yüksek çözünürlüklü kamerası ve işlem gücüyle birer uç (edge) cihaz olarak işlev görür \cite{shi2016}. Kullanıcı formu kamerasıyla tarar; görüntü Python tabanlı sunucu mimarisine iletilerek işleme alınır.
+
+\textbf{Hızlı Yayılım:} Fiziksel kurulum gerektirmediğinden sistem, bir web adresi ya da uygulama marketi üzerinden tüm Türkiye'deki kurumlara kolayca ulaştırılabilir.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\linewidth]{image.png}
+    \caption{Sistem Mimari Diyagramı}
+    \label{fig:placeholder}
+\end{figure}
+
+\subsection{Teknik Uygulanabilirlik ve Yerinde Müdahale}
+
+Sistem, karmaşık bir kurulum gerektirmeksizin kullanıcı arayüzü üzerinden tek adımda analiz başlatılmasına olanak tanımaktadır.
+
+\textbf{Akıllı Kamera Rehberi:} Mobil uygulama veya web arayüzü, kâğıdın doğru açıda tutulup tutulmadığını OpenCV tabanlı ``gerçek zamanlı kılavuz çizgiler'' ile kullanıcıya bildirir \cite{rajagopal2024}. Böylece teknik bilgisi olmayan kullanıcılar da hatasız tarama yapabilir.
+
+\textbf{Hibrit Veri Güvenliği:} Mobil cihazlarda internet kesintisi yaşandığında, okunan veriler cihazın yerel önbelleğinde (local storage) kriptografik olarak mühürlenir ve bağlantı sağlandığı anda bu mühürlü paketler Polygon blokzincir ağına senkronize edilir \cite{polygon2024}.
+
+\subsection{Toplumsal Fayda ve Standartlaşma}
+
+Uç Optik projesi, temel motivasyonunu kâr odaklı bir yaklaşımdan değil, eğitimde şeffaflığın ve dijital güvenlik standartlarının yaygınlaştırılmasından almaktadır \cite{dees1998}. Bir sosyal girişimcilik vizyonuyla kurgulanan sistemin sürdürülebilirliği şu temellere dayanmaktadır:
+
+\textbf{Kurumsal Uyum:} Sistemin düşük maliyetli ve açık kaynak kodlu yapısı, kamu kurumları (MEB, ÖSYM vb.) ve sivil toplum kuruluşları tarafından bir ``güvenlik standardı'' olarak benimsenmesini kolaylaştırmaktadır \cite{chen2018, savelyeva2022}.
+
+\textbf{Düşük Operasyonel Yük:} Blokzincir ağ giderleri, kullanılan Polygon gibi katman-2 çözümleri sayesinde minimize edilmiştir \cite{polygon2024}. Sistemin bakımı ve geliştirilmesi, açık kaynak topluluk desteği ve kurumsal mimarisiji partnerlikleri ile ek bir maliyet oluşturmadan sürdürülmesi planlanmaktadır.
+
+\textbf{Eğitimde Dijital Dönüşüm:} Kâğıt israfının önlenmesi ve sınav güvenliğinin dijital mühürle garanti altına alınması, projenin uzun vadeli toplumsal etkisini güçlendirmekte ve kurumlar arasındaki benimseme oranını artırmaktadır \cite{savelyeva2022}.
+
+\subsection{Mevcut Çözümlerle Karşılaştırma ve Ekonomik Verimlilik}
+
+Geleneksel optik okuma sistemleri, yüksek maliyetli ithal donanımlara ve merkezi lojistik süreçlere dayalı verimsiz bir operasyonel yapı sunmaktadır. Bu sistemlerde verinin güvenliği, merkezi sunucuları yöneten kurumların inisiyatifindedir.
+
+Uç Optik ise bu yapıyı tamamen dijitalleştirerek, halihazırda var olan akıllı telefonları birer güvenli veri giriş terminaline dönüştürmektedir \cite{shi2016, kiswani2018}. Bu yaklaşım yalnızca fiziksel cihaz maliyetlerini ortadan kaldırmakla kalmamakta; sınav kâğıtlarının toplanması ve taşınması sürecindeki güvenlik risklerini ve lojistik giderleri de önemli ölçüde azaltmaktadır. Tablo~\ref{tab:karsilastirma}'da geleneksel optik okuma sistemleri ile Uç Optik projesi karşılaştırmalı olarak sunulmaktadır.
+
+\begin{table}[H]
+\centering
+\caption{Geleneksel Optik Okuma Sistemleri ile Uç Optik Projesi Karşılaştırması}
+\label{tab:karsilastirma}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{3.8cm}p{5cm}p{5cm}@{}}
+\toprule
+\textbf{Kriter} & \textbf{Geleneksel Optik Cihazları} & \textbf{Uç Optik Projesi} \\ \midrule
+Donanım Yatırımı  & Yüksek (İthal Donanım)       & Çok Düşük (Mevcut Akıllı Telefonlar) \\
+Sarf Malzeme      & Özel baskılı formlar         & Standart A4 kâğıdı \\
+Hız               & Günler Süren Lojistik/Tarama & Saniyeler İçinde Yerinde Analiz \\
+Veri Onayı        & Manuel / İnsana Bağlı        & Kriptografik ve Otomatik Mühür \\
+Güvenlik Kaydı    & Merkezi Veritabanı           & Polygon Blokzinciri (Değiştirilemez) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{Yaygın Etki}
+% ============================================================
+
+\subsection{Toplumsal Ölçekte Etki Potansiyeli}
+
+Türkiye'de merkezi sınav sistemi, her yıl yaklaşık iki buçuk milyon öğrenciyi doğrudan, milyonlarca aile ve kurumu ise dolaylı olarak etkileyen önemli bir toplumsal olaydır. YKS sonuçları; bireylerin eğitim tercihlerini, kariyer güzergâhlarını ve yaşam kalitesini kalıcı biçimde şekillendirmektedir. Sınav sürecine duyulan güven yalnızca teknik bir mesele olmayıp eğitim sistemine duyulan genel toplumsal güvenin temel bileşenlerinden birini oluşturmaktadır. Bu çerçevede Optik Form Doğrulama Sistemi'nin (OFDS) yaygın etkisi, bireysel ölçekten kurumsal ölçeğe ve ulusal politikaya uzanan çok katmanlı bir açıdan değerlendirilmelidir.
+
+Alnafrah ve Mouselli'nin çalışması, akademik belge güvencesindeki zayıflığın yalnızca düşük gelirli ülkelerde değil, gelişmiş ülkelerde de ciddi toplumsal problemlere yol açtığını belgeler; Massachusetts Teknoloji Enstitüsü'nde yaşanan sahte diploma skandalını somut bir örnek olarak sunar \cite{alnafrah2021}. Yüksek riskli merkezi sınav sistemleri için bakıldığında bu tür zafiyetlerin toplumsal maliyeti çok daha ağır sonuçlar doğurabilmektedir. Bir öğrencinin haksız bir şekilde düşük puan alması ya da tersine haksız biçimde avantajlı konuma getirilmesi hem bireysel yaşam fırsatlarını hem de yükseköğretim sisteminin liyakat temelini doğrudan sarsmaktadır. OFDS, sınav sürecinin en önemli veri üretim aşamasına kriptografik bir güvence katmanı ekleyerek bu toplumsal güven zafiyetini teknik bir çözümle gidermektedir.
+
+\subsection{Hedef Kitle ve Paydaş Analizi}
+
+Sistemin yaygın etkisi değerlendirildiğinde birden fazla paydaş grubunun farklı boyutlarda fayda sağlayacağı görülmektedir. Öğrenciler açısından bakıldığında sistem, sınav bitiminin hemen ardından kendi optik formlarına ait kriptografik mührü bağımsız olarak doğrulayabilme imkânı sunmaktadır. Bu doğrulama, herhangi bir merkezi otoriteye güven duyulmasını zorunlu hâle getirmeyen, matematiksel olarak ispat edilebilir bir nitelik taşımaktadır. Chaudhari ve Shirole'nin sistematik derlemesinde blokzincirin eğitim alanındaki on temel faydası arasında öğrenci özerkliği ve veri sahipliği ön plana çıkmaktadır \cite{chaudhari2025}. OFDS, bu ilkeyi sınav sürecinin en hassas noktasına taşımaktadır.
+
+Sınav uygulayıcı kurumlar açısından ise sistem, hesap verebilirliği güçlendiren şeffaf bir denetim altyapısı sunmaktadır. Sayım sürecinin her adımı değiştirilemez kayıtlarla belgelendiğinden, olası itiraz ve soruşturma süreçlerinde kurumların başvurabileceği bağımsız ve güvenilir bir referans oluşmaktadır. Pandey ve arkadaşlarının vurguladığı üzere, blokzincir tabanlı doğrulama sistemleri yalnızca sahteciliği önlemekle kalmayıp kurumların itibarını da pekiştirmektedir \cite{pandey2024}. Eğitim denetim otoriteleri ve politika yapıcılar açısından ise OFDS, merkezi sınav altyapısının dijital dönüşümünde somut ve ölçülebilir bir adımı temsil etmekte; uluslararası iyi uygulama örnekleriyle uyumlu bir standart oluşturulmasına zemin hazırlamaktadır.
+
+\subsection{Ölçeklenebilirlik ve Genişletilebilirlik Boyutu}
+
+OFDS'nin yaygın etkisinin kalıcı olabilmesi için sistemin mevcut sınav ölçeğini ve çeşitliliğini karşılayacak biçimde ölçeklenebilir olması gerekmektedir. Sistem mimarisi bu gereksinim gözetilerek tasarlanmıştır. Flask tabanlı arka uç sunucu asenkron istek yönetimi ile yüksek hacimli eş zamanlı işlemleri desteklemekte; SQLite tabanlı çevrimdışı tampon katmanı bağlantı sürekliliği garanti edilemeyen çok sayıda sınav salonunda eş zamanlı uygulama yapılabilmesine olanak tanımaktadır. Polygon PoS blokzinciri ise Ethereum ana ağına kıyasla işlem başına önemli ölçüde daha düşük maliyet ve gecikme sunan yan zincir mimarisiyle büyük ölçekli kullanım için elverişli bir platform oluşturmaktadır \cite{polygon2024}.
+
+Tan-Vo ve arkadaşlarının deneysel bulgularına göre Arbitrum gibi Layer-2 çözümlerinde bin eş zamanlı işlemin tamamlanma süresi 57 saniyeyle sınırlı kalmaktadır; aynı iş yükünde Ethereum Layer-1 ağında bu süre 151 saniyeye ulaşmaktadır \cite{tanvo2024}. OFDS'nin Polygon PoS tercihinin de benzer bir başarım avantajı sağlayacağı öngörülmektedir. OMR modülündeki ızgara parametrelerinin yapılandırma dosyasından okunması, farklı soru sayısı ve şık düzenine sahip optik formların yazılım değişikliği gerektirmeksizin desteklenebilmesini mümkün kılmaktadır. Bu tasarım kararı, sistemin YKS dışındaki merkezi sınavlara ---KPSS, ALES, DGS--- ve hatta üniversitelerin ara sınav uygulamalarına uyarlanmasının önünü açmaktadır.
+
+Çoklu kurum desteği açısından ise akıllı sözleşmedeki erişim kontrol mekanizması, OpenZeppelin AccessControl kütüphanesiyle genişletilerek birden fazla kurumun yetkili işlem gerçekleştirebileceği bir yapıya dönüştürülebilir. Alnafrah ve Mouselli'nin Suriye ve Sudan ölçeğinde gerçekleştirdiği uygulanabilirlik analizi, benzer bir ulusal blokzincir platformunun ortalama on binlerce öğrenci için yıllık yalnızca 1,5 ABD Doları başına maliyet ürettiğini ortaya koymaktadır \cite{alnafrah2021}. Bu maliyet analizi, OFDS'nin Türkiye ölçeğinde uygulanabilirliğine dair güçlü bir referans noktası sunmaktadır.
+
+\subsection{Ekonomik ve Kurumsal Etki}
+
+Sınav süreçlerinde yaşanan anlaşmazlıkların yargıya götürülmesi, itiraz komisyonlarının doğru bir şekilde işletilmesi ve manuel yeniden sayım gereklilikleri, hem zaman hem de kaynak açısından ciddi kurumsal maliyetler oluşturmaktadır. OFDS, her optik forma ait değiştirilemez dijital kaydın ayrı olarak sorgulanabilmesini sağlayarak bu maliyetleri azaltma potansiyeline sahiptir. Rani ve arkadaşlarının sistematik derlemesinde blokzincir tabanlı sistemlerin eğitim alanında manuel doğrulama süreçlerini otomatize ederek operasyonel maliyetleri anlamlı ölçüde düşürdüğü vurgulanmaktadır \cite{rani2024}. Sınav sonuçlarına yönelik hukuki itiraz süreçlerinde mahkemeye sunulabilecek kriptografik kanıt sayılabilecek işlem kayıtları, hem kurumsal hem de bireysel düzeyde hak arama mekanizmalarını güçlendirmektedir.
+
+Sistemin açık kaynak özelliği de yaygın etkinin önemli bir bileşenini oluşturmaktadır. Berrios Moya ve arkadaşlarının ZKBAR-V çalışmasında vurgulandığı üzere, açık kaynak lisanslaması sistemin kurumsal benimseme maliyetini düşürmekte, akademik toplulukların katkılarıyla sürekli iyileşmeye yol açmakta ve şeffaflık ilkesini sistemin kendisine de uygulamaktadır \cite{berrios2025}. OFDS mimarisinin belgelenmesi ve kamuoyuyla paylaşılması, benzer sorunlarla karşılaşan diğer ülkelerin ya da kurumların bu sistemden yararlanmasına olanak tanıyacaktır.
+
+\subsection{Ulusal Teknoloji Ekosistemi ve Blokzincir Kapasitesine Katkı}
+
+TEKNOFEST Blokzincir Yarışması'nın temel amacı, ülkemizde blokzincir teknolojisine yönelik bilgi birikimini ve yetişmiş insan gücünü artırmaktır. OFDS bu amaca kamu yönetimi alanındaki gerçek bir problemi ele alarak, mevcut teknik altyapıyla entegre olabilecek yerli bir çözüm ortaya koyarak ve geliştirme sürecinde edinilen deneyimin akademik ve teknik literatüre kazandırılmasıyla katkı sağlayacaktır. Projenin blokzincir kapsamı değerlendirildiğinde DLT Sistemlerinde Mahremiyet, Seçilmiş DLT Uygulama Alanları ve özellikle kamu yönetimi ile eğitim alanındaki gerçek dünya problemlerine çözüm üretme hedefleriyle doğrudan örtüştüğü görülmektedir.
+
+Blokzincir teknolojisinin eğitim alanındaki uygulamalarına ilişkin literatür, 2017 yılından 2023 yılına kadar doğrusal bir büyüme eğilimi sergilemekte ve bu trendin ivmesini koruyarak devam ettiğine dair güçlü göstergeler sunmaktadır \cite{rani2024}. Merkezi sınav sistemlerinde optik form doğrulama gibi yüksek etkili, kamuoyunun yakından izlediği ve toplumsal güveni doğrudan ilgilendiren bir probleme yönelik pratik bir çözüm üretmek, bu büyüyen araştırma alanına Türkiye'nin özgün ve somut bir katkısını göstermektedir. Projenin başarıyla tamamlanması, benzer sistemlerin farklı sınav türleri ve kurumsal süreçlere uyarlanmasına öncülük edecek bir model oluşturacak; blokzincir ekosisteminin kamu sektörü uygulamalarındaki görünürlüğünü ve güvenilirliğini pekiştirecektir.
+
+% ============================================================
+\section{Sürdürülebilirlik}
+% ============================================================
+
+\subsection{Teknolojik Sürdürülebilirlik ve Risk Yönetimi}
+Geliştirdiğimiz analiz sistemi özellikle sınav esnasında yaşanabilecek kriz anlarında; değişebilecek koşullara ve altyapı riskleri ele alındığında daha rahat kullanım sunacak şekilde tasarlanmıştır. Sınav anında yaşanabilecek risklerin en büyüğü “internet kesintisi” olasılığına karşı SQLite tampon bellek mimarisi entegre edilecektir~\cite{sqlite_academic}. İnternet bağlantısı koptuğunda veriler yerel veri tabanında şifrelenerek bekletilir, bağlantı sağlandığında IPFS ve blokzincir ağına otomatik senkronize edilir~cite{benet2014}. Sistemdeki akıllı sözleşmelerin EVM (Ethereum Sanal Makinesi) uyumlu olması, gelecekte gerekirse sistemin diğer blokzincir ağlarıyla kolayca entegre olarak ek maliyetsiz çalışabilmesine ve böylelikle uzun vadeli teknolojik sürdürülebilirlik sunmaktadır~\cite{belchior2023interop}. Sistemin tek bir altyapıya bağlı kalmadan, her duruma hazırlıklı ve esnek sunulması planlanıyor.
+
+\subsection{Çevresel Sürdürülebilirlik}
+Günümüzde kullanılan sistem ciddi kağıt, su tüketimine sebep olmaktadır. Ayrıca bu materyallerin taşınması, korunma altına alınması işlenmesi gibi süreçler çevreye zarar vermekte, karbon salınımına yol açmaktadır. Geliştirilen sistem, kısa vadede optik form kullanımını sıfırlamasa da, eğitim kurumlarını "Sıfır Kağıt" hedefine ulaştıracak, yürütülüyor olan 2053 Net Sıfır Emisyon Vizyonu ile dijital tescil altyapısını bugünden inşa etmektedir~\cite{cevre2022}. Bu hususlarla beraber blokzincir entegrasyonunda yüksek enerji tüketen geleneksel Proof of Work (PoW) algoritmaları yerine, minimum enerjili çalışan ve karbon ayak izi düşük olan Proof of Stake (PoS) tabanlı Polygon ağı tercih edilmiştir~\cite{polygon2024}. Böylece proje, yeşil teknoloji ve sürdürülebilirlik ilkeleriyle tam uyumlu çalışır.
+
+\subsection{Finansal Sürdürülebilirlik}
+Sınav güvenliğinin ihlali, evrak kaybı veya manipülasyon iddiaları sınavların iptal edilerek tekrarlanmasına yol açabilmektedir. Ciddi bir kaynak ve iş gücü israfı yaratan bu durum, kamu maliyesine ek yük getirmektedir. Proje, pahalı donanımlara ihtiyaç duymadan standart kameralarla bile %95 ve üzeri başarıyla görüntü işleyebilen ekonomik bir yapıdadır. Blokzincir üzerindeki işlem ücretleri (gas fee), geliştirilen kurumsal aktarıcı (relayer) modeli sayesinde son kullanıcıya yansıtılmaz ve Polygon ağının düşük işlem maliyetleriyle sistemin kendisini amorti etmesi sağlanmaktadır. Geliştirilen sistem, sınav krizlerini önleyen düşük maliyetli bir "dijital sigorta” dır~\cite{grather2018}.
+
+\subsection{Sosyal Sürdürülebilirlik ve Veri Gizliliği}
+Eğitim sistemleri ele alındığı zaman toplumsal güvenin sağlanması, sosyal sürdürülebilirliğin en temel yapı taşı olarak nitelendirilmesi mümkündür. Güvenin tahsis edilmesinin en önemli göstergelerinden biri de verilen onca yıllık emeğin şu anda olduğu gibi gelecekte de velinimet olarak değerlendirilip sahip çıkılmasıdır. Optik form verilerinin şifrelenerek blokzincire kaydedilmesi, sonuçların değiştirilemezliğini matematiksel olarak kanıtlayarak 6698 sayılı Kişisel Verilerin Korunması Kanunu'na (KVKK) tam uyumlu geliştirilmiştir~\cite{kvkk6698}. Öğrencilerin T.C. kimlik ve isim bilgileri blokzincire hiçbir zaman açık metin olarak yazılmaz; SHA-256 kriptografik özetleme algoritması ve kuruma özel tuz (salt) değerleriyle tamamen anonimleştirilerek dijital kimlik mahremiyeti göz önünde bulundurularak güvence altına alınmaktadır.
+
+% ============================================================
+\section{Proje Takvimi}
+% ============================================================
+
+\subsection{İş Paketlerinin Belirlenmesi}
+
+\vspace{5pt}
+\noindent\textbf{İP1: Literatür Taraması (Mart 2026)}
+
+\noindent\textbf{İP1.1:} Mevcut görüntü işleme kütüphaneleri (OpenCV, TensorFlow Lite, YOLO vb.) incelendi ve telefon kamerasıyla optik form okumaya en uygun yaklaşımın OpenCV olduğu belirlendi.
+
+\noindent\textbf{İP1.2:} Okunan optik verilerin değiştirilemez biçimde saklanması için Polygon (katman-2) başta olmak üzere mevcut blokzincir platformları incelendi ve SHA-256 hash algoritmasının bu platformlarla uyumluluğu araştırıldı. Polygon'un düşük ağ giderleri ve Ethereum uyumluluğu mevcut sistemlerle karşılaştırıldı.
+
+\vspace{10pt}
+\noindent\textbf{İP2: Sistem Tasarımı ve Mimarisi (Nisan 2026)}
+
+\noindent\textbf{İP2.1:} Telefon kamerası üzerinden optik okuma yapacak mekanizmanın akış şeması ve veri yapısı tasarlanacaktır. Aydınlatma değişiklikleri, kamera çözünürlüğü gibi gerçek dünya koşulları bu aşamada projeye dahil edilecektir. Kılavuz çizgiler aracılığıyla kullanıcının optik kâğıdı düzgün tutmasını sağlayacak rehber sistem bu aşamada şekillendirilecektir.
+
+\noindent\textbf{İP2.2:} Optik okuma sonucunda elde edilen verilerin SHA-256 algoritmasıyla işlenerek blokzincire yazılacağı sistemin genel yapısı oluşturulacaktır. Verinin hashlenip zincire eklenmesi, akıllı kontrat yapısı ve güvenlik önlemleri bu aşamada belirlenip dosyalanacaktır. İnternet bağlantısının kesildiği zamanlarda verilerin yerel önbellekte şifreli olarak tutulup bağlantı geri geldiğinde zincire aktarılması da bu aşamada değerlendirilecektir.
+
+\vspace{10pt}
+\noindent\textbf{İP3: Tasarım ve Uygulama (Mayıs--Haziran 2026)}
+
+\noindent\textbf{İP3.1:} OpenCV ile geliştirilecek olan optik okuma birimi, oluşturulan tasarım rehberi doğrultusunda hayata geçirilecektir. Kılavuz çizgi sistemi ve form alanlarının otomatik tespiti işlevleri hayata geçirilecek ve Python kaynaklı sunucuya görüntü aktarımı sağlanacaktır. Standart A4 formları üzerinde ön testler yapılarak birimin kararlılığı artırılacaktır.
+
+\noindent\textbf{İP3.2:} Optik okuma biriminden gelen veriler SHA-256 algoritmasıyla işlenerek Polygon blokzinciri üzerine yazılacaktır. Bağlantı kopması durumları için yerel önbellek ve otomatik aktarım işleyişi geliştirilecek ve akıllı kontrat yapısı ile verinin zincire eklenmesi doğrulanması sağlanacaktır.
+
+\vspace{10pt}
+\noindent\textbf{İP4: Test ve Doğrulama (Temmuz 2026)}
+
+\noindent\textbf{İP4.1:} Geliştirilen optik okuma sistemi farklı aydınlatma koşulları, kamera açıları gibi etmenler göz önünde bulundurularak sistematik bir biçimde test edilecektir. Teknik bilgisi olmayan kullanıcıların da sistemi kullanabileceğini göstermek amacıyla gerçek sınav ortamı simüle edilerek kılavuz çizgi sisteminin etkinliği ölçülecektir. Mevcut olarak kullanılan optik okuma sistemleriyle hız ve doğruluk karşılaştırması yapılacaktır.
+
+\noindent\textbf{İP4.2:} Blokzincire kaydedilen verilerin değiştirilemezliği, yerel önbellekte bulunan verilerin bağlantı sonrası doğru şekilde blokzincire aktarılıp aktarılmadığı kontrol edilecektir. Yetkisiz müdahale senaryoları denenerek sistemin bu senaryoları tespit edip edemediği ve bu durumlara nasıl müdahale ettiği sınanacaktır.
+
+\vspace{15pt}
+
+\begin{table}[H]
+\centering
+\caption{Proje Takvimi ve İş Paketleri Dağılımı}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{3.5cm}cp{8.5cm}@{}}
+\toprule
+\textbf{Ay} & \textbf{İş Paketi} & \textbf{Yapılacak Faaliyetler} \\ \midrule
+\textbf{Mart 2026} & İP1.1, İP1.2 & Görüntü işleme kütüphanelerinin karşılaştırılması, blokzincir platformlarının incelenmesi \\
+\textbf{Nisan 2026} & İP2.1, İP2.2 & Kılavuz çizgi sisteminin genel yapısının oluşturulması ve akıllı kontrat taslağının oluşturulması \\
+\textbf{Mayıs 2026} & İP3.1 & Optik okuma modülünün kodlanması, Python sunucusuna görüntü iletimi \\
+\textbf{Haziran 2026} & İP3.2 & Hashing ve verilerin blokzincire yazılması, bağlantı kopması durumları için yerel önbellek oluşturma \\
+\textbf{Temmuz 2026} & İP4.1--İP4.2 & Farklı aydınlatma ve açılarda doğruluk testleri, verilerin değiştirilemezliğinin testi, teknik hata giderme \\
+\textbf{Ağustos -- Eylül 2026} & İP4 & Final sunum materyallerinin hazırlığı, sistemin simülasyon ortamında testi, jüri sorularına hazırlık, poster ve tanıtım videosunun oluşturulması \\
+\textbf{30 Eylül -- 4 Ekim 2026} & İP4 & TEKNOFEST Şanlıurfa'da proje sunumu \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{Takım Yapısı}
+% ============================================================
+
+Edge-OMR (Uç Optik), farklı disiplinlerin ortak çalışmasıyla geliştirilmiş bir proje olduğundan takım üyeleri kendi yatkın oldukları alanlara göre optimize edilmiş bir görev dağılımında görevlerini yerine getirmektedirler.
+
+\subsection{Görev Dağılımları ve Uzmanlıklar}
+
+\begin{table}[H]
+\centering
+\caption{Takım Üyelerinin Görev Dağılımı ve Yetkinlikleri}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{3.5cm}p{7cm}p{4.5cm}@{}}
+\toprule
+\textbf{Görev} & \textbf{Sorumlu Olduğu Alanlar} & \textbf{Yetkinlikler} \\ \midrule
+Ekip Lideri ve Sistem Mimarı & Web, Blokzincir ve Görüntü İşleme bileşenlerinin birbirine entegrasyonu ve proje takviminin takibi & Proje Planlama ve Koordinasyon, Entegre Yazılım Mimarisi, Python Tabanlı Yazılım Geliştirme \\
+Görüntü İşleme Uzmanı & OpenCV kütüphanesinin kullanılması ve optik formdaki şıkların dijital veriye dönüştürülmesi & Python, OpenCV \\
+Blokzincir ve Veri Güvenliği Uzmanı & Akıllı kontratların geliştirilmesi, verilerin SHA-256 hash fonksiyonu ile özetlenerek Polygon ağına kaydedilmesi ve blokzincir üzerinde doğrulanması & Solidity, Web3.py, Kriptografi \\
+Backend (Sunucu) Geliştirici & Flask tabanlı backend geliştirme ve SQL veritabanı yönetimi & Python, Flask, Veritabanı Yönetimi \\
+Frontend ve UI/UX Tasarımcısı & Web ve mobil arayüz tasarımı, kamera entegrasyonu ve geri bildirim sistemi geliştirme & HTML5, CSS3, JavaScript \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Ekip Organizasyonu ve İş Akışı}
+
+Projenin ilk gününden bu yana parçalı bir yapıyla çalışma tercih edilmiştir. Bu parçalı yapıyı sağlam kılan birtakım özellikler aşağıda sıralanmıştır:
+
+\vspace{5pt}
+\noindent\textbf{Geliştirme Süreci:} Geliştirme süreci proje boyunca Github üzerinden devam ettirilmiştir ve projede gelişme oldukça güncellemeler Github'a düzenli olarak takım üyeleri tarafından aktarılmıştır. Görüntü İşleme, Blokzincir ve Arayüz kısımlarının her biri kendi ayrı dalında ilerlemiş ve zamanı geldiğinde ana sisteme dahil edilmiştir.
+
+\vspace{5pt}
+\noindent\textbf{İş Birliği ve İletişim:} Beş kişiden oluşan takım üyelerinin İstanbul Teknik Üniversitesi'nde (İTÜ) bulunmaları ve birbirlerine yakınlığı sayesinde sık sık toplantılar yapılmış ve projenin genel gidişatı değerlendirilmiştir. Beklenmedik teknik sorunlar meydana geldiğinde ise ilgili kişilerle en kısa zamanda bir araya gelinip çözümler üretilmeye çalışılmıştır.
+
+\vspace{5pt}
+\noindent\textbf{Test ve Doğrulama Süreci:} Sistemin güvenli çalışıp çalışmadığının ölçülmesi için veri bütünlüğü, ağ senkronizasyon hızları testleri ve hatalı veri girişlerinde kriptografik protokollerin beklenileni verip vermediği gibi birkaç farklı açıdan test edilmiştir. Bu testler sadece ilgili kişi tarafından değil, çapraz olarak diğer alanlarla ilgilenen takım üyeleri tarafından da çapraz olarak test edilmiştir. En önem verilen ve projenin de temelini oluşturan kısım zincire kaydedilen verinin hiçbir koşulda değiştirilememesi olduğundan testlerin büyük bir kısmı buna göre kurgulanmış ve uygulanmıştır.
+
+% ============================================================
+\newpage
+\section{Kaynakça}
+% ============================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{alnafrah2021}
+Alnafrah, I., Mouselli, S., (2021) Revitalizing Blockchain Technology Potentials for Smooth Academic Records Management and Verification in Low-income Countries,
+\textit{International Journal of Educational Development},
+Cilt~85, Makale No:~102460,
+DOI: 10.1016/j.ijedudev.2021.102460.
+
+\bibitem{chaudhari2025}
+Chaudhari, S., Shirole, M., (2025) Blockchain-Driven Academic Learning Record Management in Higher Education: A Comprehensive Review of Methodologies, Applications, Benefits, and Challenges,
+\textit{SN Computer Science},
+Cilt~6, Makale No:~427,
+DOI: 10.1007/s42979-025-03952-z.
+
+\bibitem{rani2024}
+Rani, P., Sachan, R.K., Kukreja, S., (2024) A systematic study on blockchain technology in education: initiatives, products, applications, benefits, challenges, and research direction,
+\textit{Computing},
+Cilt~106, ss.~405--447,
+DOI: 10.1007/s00607-023-01228-z.
+
+\bibitem{pandey2024}
+Pandey, R., Singh, G.D., Maurya, P., (2024) Enabling Credential Immutability of Academic Documents Using Blockchain,
+\textit{Lecture Notes in Networks and Systems},
+Cilt~918, ss.~371--382, Springer Nature Singapore,
+DOI: 10.1007/978-981-97-0641-9\_26.
+
+\bibitem{berrios2025}
+Berrios Moya, J.A., Ayoade, J., Uddin, M.A., (2025) A Zero-Knowledge Proof-Enabled Blockchain-Based Academic Record Verification System,
+\textit{Sensors},
+Cilt~25, Sayı~11, Makale No:~3450,
+DOI: 10.3390/s25113450.
+
+\bibitem{otsu1979}
+Otsu, N., (1979) A Threshold Selection Method from Gray-Level Histograms,
+\textit{IEEE Transactions on Systems, Man, and Cybernetics},
+Cilt~9, Sayı~1, ss.~62--66,
+DOI: 10.1109/TSMC.1979.4310076.
+
+\bibitem{benet2014}
+Benet, J.,
+IPFS -- Content Addressed, Versioned, P2P File System,
+14 Temmuz 2014,
+Erişim Tarihi Mart 2025,
+\url{https://arxiv.org/abs/1407.3561}.
+
+\bibitem{kvkk6698}
+T.C. Resmî Gazete,
+6698 Sayılı Kişisel Verilerin Korunması Kanunu,
+7 Nisan 2016,
+Erişim Tarihi Mart 2025,
+\url{https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=6698&MevzuatTur=1&MevzuatTertip=5}.
+
+\bibitem{grather2018}
+Gräther, W., Kolvenbach, S., Ruland, R., Schütte, J., Ferreira Torres, C., Wendland, F., (2018)
+Blockchain for Education: Lifelong Learning Passport,
+\textit{Proceedings of the 1st ERCIM Blockchain Workshop 2018},
+Reports of the European Society for Socially Embedded Technologies, ISSN 2510-2591,
+DOI: 10.18420/blockchain2018\_07.
+
+\bibitem{tanvo2024}
+Tan-Vo, K. vd., (2024) Optimizing Academic Certificate Management With Blockchain and Machine Learning: A Novel Approach Using Optimistic Rollups and Fraud Detection,
+\textit{IEEE Access},
+Cilt~13,
+DOI: 10.1109/ACCESS.2024.3486029.
+
+\bibitem{elias2021omr}
+de Elias, E.M., Tasinaffo, P.M., Hirata, R., (2021)
+Optical Mark Recognition: Advances, Difficulties, and Limitations,
+\textit{SN Computer Science},
+Cilt~2, Sayı~5, Makale No:~367,
+DOI: 10.1007/s42979-021-00760-z.
+
+\bibitem{kvkk_anonim}
+Kişisel Verileri Koruma Kurumu,
+Kişisel Verilerin Silinmesi, Yok Edilmesi veya Anonim Hale Getirilmesi Rehberi,
+2019,
+Erişim Tarihi Mart 2025,
+\url{https://www.kvkk.gov.tr/Icerik/2038/Kisisel-Verilerin-Silinmesi-Yok-Edilmesi-veya-Anonim-Hale-Getirilmesi}.
+
+\bibitem{rfc7578}
+Masinter, L.,
+Returning Values from Forms: multipart/form-data,
+Temmuz 2015,
+Erişim Tarihi Mart 2025,
+\url{https://www.rfc-editor.org/rfc/rfc7578}.
+
+\bibitem{flask2024}
+Pallets Projects,
+Flask Documentation 3.x,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://flask.palletsprojects.com/en/3.0.x/api/#flask.Request}.
+
+\bibitem{dotenv2024}
+Kumar, S., Bonnefoy-Claudet, B.,
+python-dotenv,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://pypi.org/project/python-dotenv/#getting-started}.
+
+\bibitem{opencv2024}
+OpenCV Library,
+Image Thresholding -- Otsu's Binarization and Gaussian Blur,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html}.
+
+\bibitem{itu2011}
+ITU-R,
+Recommendation BT.601-7: Studio Encoding Parameters of Digital Television,
+2011,
+Erişim Tarihi Mart 2025,
+\url{https://www.itu.int/rec/R-REC-BT.601-7-201103-I/en}.
+
+\bibitem{opencv_contours}
+OpenCV Library,
+Contours in OpenCV -- findContours, contourArea, boundingRect,
+\textit{OpenCV Documentation v4.x}, 2024,
+Erişim Tarihi Mart 2025,
+\url{https://docs.opencv.org/4.x/d4/d73/tutorial_py_contours_begin.html}.
+
+\bibitem{pinata2024}
+Pinata Cloud,
+Pinata API Reference -- Pin File to IPFS,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://docs.pinata.cloud/api-reference/endpoint/ipfs/pin-file-to-ipfs}.
+
+\bibitem{sqlite2024}
+SQLite Consortium,
+SQLite -- A Self-Contained, Serverless, Zero-Configuration SQL Database Engine,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://sqlite.org/features.html}.
+
+\bibitem{python_sqlite2024}
+Python Software Foundation,
+sqlite3 -- DB-API 2.0 Interface for SQLite Databases,
+\textit{Python Standard Library Documentation}, 2024,
+Erişim Tarihi Mart 2025,
+\url{https://docs.python.org/3/library/sqlite3.html}.
+
+\bibitem{sqlite_academic}
+Sai Bharadwaj, Y.V., Yarrapatruni, S., Prasada Rao, Y.V.S.S.S., (2019)
+SQLite Database and its Application on Embedded Platform,
+\textit{International Journal of Computer Trends and Technology (IJCTT)},
+Cilt~67, Sayı~2, ss.~1--6,
+DOI: 10.14445/22312803/IJCTT-V67I2P101.
+
+\bibitem{wood2014}
+Wood, G.,
+Ethereum: A Secure Decentralised Generalised Transaction Ledger,
+2014,
+Erişim Tarihi Mart 2025,
+\url{https://ethereum.github.io/yellowpaper/paper.pdf}.
+
+\bibitem{polygon2024}
+Polygon Labs,
+Polygon PoS: Architecture Overview -- Heimdall and Bor Layers,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://docs.polygon.technology/pos/architecture/overview/}.
+
+\bibitem{nist_sha2015}
+National Institute of Standards and Technology (NIST),
+FIPS PUB 180-4: Secure Hash Standard (SHS),
+Ağustos 2015,
+Erişim Tarihi Mart 2025,
+\url{https://doi.org/10.6028/NIST.FIPS.180-4}.
+
+\bibitem{solidity2024}
+Ethereum Foundation,
+Solidity Documentation v0.8.x,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://docs.soliditylang.org/en/v0.8.26/types.html#mapping-types}.
+
+\bibitem{eip4337}
+Buterin, V., Weiss, Y., Tirosh, D., Nacson, S., Forshtat, A., Gazso, K., Hess, T.,
+ERC-4337: Account Abstraction Using Alt Mempool,
+Eylül 2021,
+Erişim Tarihi Mart 2025,
+\url{https://eips.ethereum.org/EIPS/eip-4337}.
+
+\bibitem{web3py2024}
+Web3.py Contributors,
+Web3.py Documentation,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://web3py.readthedocs.io/en/stable/web3.eth.account.html}.
+
+\bibitem{ecdsa2001}
+Johnson, D., Menezes, A., Vanstone, S., (2001)
+The Elliptic Curve Digital Signature Algorithm (ECDSA),
+\textit{International Journal of Information Security},
+Cilt~1, Sayı~1, ss.~36--63,
+DOI: 10.1007/s102070100002.
+
+\bibitem{ghaleb2020}
+Ghaleb, A., Pattabiraman, K., (2020)
+How Effective are Smart Contract Analysis Tools? Evaluating Smart Contract Static Analysis Tools Using Bug Injection,
+\textit{Proceedings of the 29th ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA 2020)},
+ss.~415--427,
+DOI: 10.1145/3395363.3397385.
+
+\bibitem{feist2019slither}
+Feist, J., Grieco, G., Groce, A., (2019)
+Slither: A Static Analysis Framework for Smart Contracts,
+\textit{Proceedings of the 2019 IEEE/ACM 2nd International Workshop on Emerging Trends in Software Engineering for Blockchain (WETSEB)},
+ss.~8--15,
+DOI: 10.1109/WETSEB.2019.00008.
+
+\bibitem{belchior2023interop}
+Belchior, R., Vasconcelos, A., Guerreiro, S., Correia, M., (2021)
+A Survey on Blockchain Interoperability: Past, Present, and Future Trends,
+\textit{ACM Computing Surveys},
+Cilt~54, Sayı~8, Makale No:~168, ss.~1--41,
+DOI: 10.1145/3471140.
+
+\bibitem{shi2016}
+Shi, W., Cao, J., Zhang, Q., Li, Y., Xu, L., (2016)
+Edge Computing: Vision and Challenges,
+\textit{IEEE Internet of Things Journal},
+Cilt~3, Sayı~5, ss.~637--646,
+DOI: 10.1109/JIOT.2016.2579198.
+
+\bibitem{rajagopal2024}
+Rajagopal, R.D., Saha, B., (2024)
+Optical Mark Recognition (OMR) Automated Grading Using OpenCV,
+\textit{AIP Conference Proceedings},
+Cilt~3075, s.~020200,
+DOI: 10.1063/5.0219019.
+
+\bibitem{dees1998}
+Dees, J.G., (1998)
+The Meaning of Social Entrepreneurship,
+\textit{Stanford University Graduate School of Business}, ss.~1--6.
+
+\bibitem{chen2018}
+Chen, G., Xu, B., Lu, M., Fu, N.S., (2018)
+Exploring Blockchain Technology and Its Potential Applications for Education,
+\textit{Smart Learning Environments},
+Cilt~5, Sayı~1,
+DOI: 10.1186/s40561-017-0050-x.
+
+\bibitem{savelyeva2022}
+Savelyeva, T., Park, J., (2022)
+Blockchain Technology for Sustainable Education,
+\textit{British Journal of Educational Technology},
+Cilt~53, Sayı~6, ss.~1591--1604,
+DOI: 10.1111/bjet.13212.
+
+\bibitem{kiswani2018}
+Kiswani, A., (2018)
+Cross-platform Mobile Document Scanner,
+\textit{Computer Science and Engineering},
+Cilt~8, Sayı~1, ss.~1--6,
+DOI: 10.5923/j.computer.20180801.01.
+
+\bibitem{cevre2022}
+T.C. Çevre, Şehircilik ve İklim Değişikliği Bakanlığı,
+Türkiye'nin 2053 Net Sıfır Emisyon Hedefi ve İklim Değişikliği Stratejisi,
+2022,
+Erişim Tarihi Mart 2026,
+\url{https://iklim.gov.tr/2053-net-sifir-emisyon-hedefi}.
+
+\bibitem{tesseract2024}
+Google LLC,
+Tesseract OCR -- Open Source OCR Engine,
+2024,
+Erişim Tarihi Mart 2025,
+\url{https://github.com/tesseract-ocr/tesseract}.
+
+\bibitem{smith2007}
+Smith, R., (2007)
+An Overview of the Tesseract OCR Engine,
+\textit{Proceedings of the Ninth International Conference on Document Analysis and Recognition (ICDAR 2007)},
+Cilt~2, ss.~629--633,
+DOI: 10.1109/ICDAR.2007.4376991.
+
+\bibitem{unicode2023}
+The Unicode Consortium,
+Unicode Standard, Version 15.1.0,
+2023,
+Erişim Tarihi Mart 2025,
+\url{https://www.unicode.org/versions/Unicode15.1.0/}.
+
+\bibitem{duwadi2021}
+Duwadi, N., (2021)
+A Systematic Review on Blockchain in Education: Opportunities and Challenges,
+\textit{Walden Faculty and Staff Publications}, s.~58,
+\url{https://scholarworks.waldenu.edu/facpubs/58}.
+
+\end{thebibliography}
+
+\end{document}

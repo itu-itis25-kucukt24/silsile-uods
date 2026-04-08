@@ -1,0 +1,6 @@
+Flask==3.0.0
+opencv-python
+numpy
+web3
+python-dotenv
+requests

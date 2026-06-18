@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "_aciklama": "Bu dosya, Uç Optik Doğrulama Sistemi'nin OMR motorunun hangi piksel koordinatlarını hangi alan (TC kimlik, isim, cevap) olarak yorumlayacağını tanımlar (bkz. rapor Denklem 5 ve bölüm 3.9.2). Farklı bir form tasarımına geçmek için YALNIZCA bu dosya güncellenir; Python kodunda değişiklik gerekmez.",
+  "canvas": {
+    "_aciklama": "Perspektif düzeltmesi sonrası elde edilen 'kanonik' görüntünün sabit piksel boyutu (A4 oranına yakın).",
+    "width": 1240,
+    "height": 1754
+  },
+  "reference_markers": {
+    "_aciklama": "Formun 4 köşesindeki dolgulu kare işaretçilerin tespiti için filtre parametreleri (Denklem 4). marker_size_px ve margin_px, kanonik (1240x1754) uzaydaki işaretçi kare kenar uzunluğu ve sayfa kenarından iç boşluğunu tanımlar; generate_test_form.py ve omr_engine.py bu değerleri ReferenceMarkerConfig.anchor_points_ordered() üzerinden ORTAK kaynaktan okur.",
+    "threshold_fill_ratio": 0.55,
+    "min_area_ratio": 0.0003,
+    "max_area_ratio": 0.02,
+    "aspect_ratio_tolerance": 0.35,
+    "corner_search_ratio": 0.28,
+    "marker_size_px": 70,
+    "margin_px": 45
+  },
+  "grid": {
+    "_aciklama": "Izgara orijini ve hücre adımları, piksel biriminde (Denklem 5: x0, y0, dx, dy). origin_x/origin_y değerleri, köşe referans işaretçileriyle (45-115 px bölgesi) çakışmayacak şekilde seçilmiştir.",
+    "origin_x": 130,
+    "origin_y": 140,
+    "cell_width": 22,
+    "cell_height": 22
+  },
+  "decision_threshold": 0.35,
+  "fields": [
+    {
+      "name": "tc_kimlik",
+      "_aciklama": "11 haneli TC kimlik numarası. Her hane bir sütun, 0-9 rakamları satırlardır.",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "position_count": 11,
+      "layout": "columns_are_positions",
+      "start_row": 0,
+      "start_col": 0,
+      "output_join": "",
+      "contains_personal_data": true
+    },
+    {
+      "name": "isim",
+      "_aciklama": "Ad-soyad, en fazla 12 karakter. Her karakter bir sütun, A-Z + boşluk satırlardır.",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "Y",
+        "Z",
+        " "
+      ],
+      "position_count": 12,
+      "layout": "columns_are_positions",
+      "start_row": 11,
+      "start_col": 0,
+      "output_join": "",
+      "contains_personal_data": true
+    },
+    {
+      "name": "cevaplar",
+      "_aciklama": "20 sorulu test. Her soru bir satır, A-E şıkları sütunlardır.",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "position_count": 20,
+      "layout": "rows_are_positions",
+      "start_row": 40,
+      "start_col": 0,
+      "output_join": null
+    }
+  ]
+}

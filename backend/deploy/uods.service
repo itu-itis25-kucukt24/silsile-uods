@@ -1,0 +1,38 @@
+# deploy/uods.service
+# ====================
+# systemd servis tanımı. Kurulum:
+#
+#   sudo cp deploy/uods.service /etc/systemd/system/uods.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable uods
+#   sudo systemctl start uods
+#   sudo systemctl status uods
+#   sudo journalctl -u uods -f          # canlı log takibi
+#
+# AŞAĞIDAKİ YER TUTUCULARI KENDİ ORTAMINIZA GÖRE DÜZENLEYİN:
+#   <UODS_KULLANICISI>  -> uygulamayı çalıştıracak, root OLMAYAN bir sistem kullanıcısı
+#                          (örn: sudo useradd -r -s /usr/sbin/nologin uods)
+#   /opt/uods_project    -> projenin sunucudaki gerçek yolu
+
+[Unit]
+Description=UODS - Uc Optik Dogrulama Sistemi (Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=<UODS_KULLANICISI>
+Group=<UODS_KULLANICISI>
+WorkingDirectory=/opt/uods_project
+EnvironmentFile=/opt/uods_project/.env
+ExecStart=/opt/uods_project/.venv/bin/gunicorn -c deploy/gunicorn.conf.py wsgi:app
+Restart=on-failure
+RestartSec=5
+
+# Güvenlik sıkılaştırması (isteğe bağlı ama önerilir)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/uods_project/instance /opt/uods_project/data
+
+[Install]
+WantedBy=multi-user.target

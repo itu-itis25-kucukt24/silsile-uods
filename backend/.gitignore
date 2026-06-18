@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.env
+instance/*.db
+instance/*.db-journal
+data/uploads/*
+data/processed/*
+!data/uploads/.gitkeep
+!data/processed/.gitkeep
+venv/
+.venv/
+*.log
+instance/logs/
+.DS_Store
+contracts/build/

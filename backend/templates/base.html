@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}UODS — Uç Optik Doğrulama Sistemi{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__bar">
+      <a class="wordmark" href="{{ url_for('index') }}">
+        UÇ OPTİK
+        <span>Doğrulama Sistemi · Blokzincir Mühürlü Sınav Kaydı</span>
+      </a>
+      <div class="site-header__meta">
+        <span class="chain-pill"><span class="chain-pill__dot"></span> Polygon Ağı</span>
+        <span>{{ kurum_adi if kurum_adi is defined else "" }}</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    UODS — TEKNOFEST kapsamında geliştirilen blokzincir tabanlı optik form doğrulama sistemi.
+    Kimlik bilgileri hiçbir aşamada zincire veya IPFS'e yazılmaz; yalnızca tek yönlü
+    anonimleştirilmiş özet (k anahtarı) saklanır.
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Kayıt Mühürlendi — UODS{% endblock %}
+
+{% block content %}
+  <div class="card card--torn" style="max-width:620px; margin:0 auto;">
+    <div class="status-block">
+      <div class="seal-badge seal-badge--synced">
+        <svg class="seal-badge__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="seal-badge__caption">Mühürlü</span>
+      </div>
+      <h1>Kayıt blokzincire mühürlendi</h1>
+      <p>Adım 6 / 6 tamamlandı — bu form artık kalıcı ve değiştirilemez olarak kayıtlıdır.</p>
+    </div>
+
+    <dl class="receipt">
+      <div class="receipt-line">
+        <dt>Anonim k anahtarı</dt>
+        <dd class="mono">{{ k_anahtar }}</dd>
+      </div>
+      <div class="receipt-line">
+        <dt>IPFS CID (redakte görüntü)</dt>
+        <dd class="mono"><a href="{{ gateway_url }}" target="_blank" rel="noopener">{{ record.ipfs_cid }}</a></dd>
+      </div>
+      {% if record.merkle_root %}
+      <div class="receipt-line">
+        <dt>Parti kökü (Merkle root)</dt>
+        <dd class="mono">{{ record.merkle_root[:18] }}…</dd>
+      </div>
+      {% endif %}
+      <div class="receipt-line">
+        <dt>Parti işlemi (TX) özeti</dt>
+        <dd class="mono"><a href="{{ polygonscan_url }}" target="_blank" rel="noopener">{{ record.tx_hash[:18] }}…</a></dd>
+      </div>
+      <div class="receipt-line">
+        <dt>Yerel kayıt no</dt>
+        <dd>#{{ record.id }}</dd>
+      </div>
+      <div class="receipt-line">
+        <dt>Oluşturulma zamanı</dt>
+        <dd>{{ record.created_at }}</dd>
+      </div>
+    </dl>
+
+    <p class="card__eyebrow" style="margin-top:24px;">Okunan cevap dizisi</p>
+    <ul class="bubble-sheet">
+      {% for c in cevaplar %}
+        <li class="bubble bubble--{{ c.css }}">
+          <span class="bubble__index">{{ loop.index }}</span>
+          <span class="bubble__mark">{{ c.value if c.value else ("∅" if c.css == "bos" else "✕") }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <div class="callout callout--ledger" style="margin-top:24px;">
+      TC kimlik numarası ve isim hiçbir zaman bu kayıtla birlikte saklanmadı.
+      Yukarıdaki k anahtarı, kurumun elindeki bilgilerle yeniden türetilip
+      <a href="{{ url_for('verify') }}">kurumsal sorgu ekranından</a> doğrulanabilir.
+    </div>
+
+    <div class="actions">
+      <a class="btn" href="{{ url_for('index') }}">Yeni form yükle</a>
+      <a class="btn btn--ghost" href="{{ polygonscan_url }}" target="_blank" rel="noopener">PolygonScan'de görüntüle</a>
+    </div>
+  </div>
+{% endblock %}

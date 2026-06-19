@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Kurumsal Sorgu — UODS{% endblock %}
+
+{% block content %}
+  <p class="card__eyebrow">Yetkili kurum sorgu ekranı</p>
+  <h1>Zincirdeki kaydı doğrula</h1>
+  <p class="lede">
+    Elinizdeki TC kimlik numarası, isim ve sınav tarihi bilgisiyle anonimleştirme
+    anahtarını (k) yeniden türetip blokzincirdeki kaydı sorgulayın. Bu bilgiler
+    sunucuda hiçbir biçimde saklanmaz; yalnızca anlık sorgu için kullanılır.
+  </p>
+
+  {% if not auth_enabled %}
+  <div class="callout callout--amber" style="margin-bottom:24px;">
+    Güvenlik uyarısı: Bu ekran şu anda kimlik doğrulamasız (korumasız)
+    çalışıyor çünkü <code>.env</code> dosyasında
+    <code>INSTITUTION_VERIFY_USERNAME</code> /
+    <code>INSTITUTION_VERIFY_PASSWORD_HASH</code> tanımlı değil. Üretime
+    almadan önce bu iki değeri tanımlayın; tanımlandığında ekran otomatik
+    olarak HTTP Basic Auth ile korunur.
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <form action="{{ url_for('verify') }}" method="post">
+      <div class="field">
+        <label for="tc_kimlik">TC kimlik numarası</label>
+        <input type="text" id="tc_kimlik" name="tc_kimlik" inputmode="numeric" maxlength="11" required>
+      </div>
+      <div class="field">
+        <label for="isim">Ad Soyad</label>
+        <input type="text" id="isim" name="isim" required>
+      </div>
+      <div class="field">
+        <label for="sinav_tarihi_v">Sınav tarihi</label>
+        <input type="date" id="sinav_tarihi_v" name="sinav_tarihi" required>
+      </div>
+      <button class="btn" type="submit">Kaydı sorgula</button>
+    </form>
+  </div>
+
+  {% if error %}
+    <div class="card" style="margin-top:20px;">
+      <div class="callout">{{ error }}</div>
+    </div>
+  {% endif %}
+
+  {% if result %}
+    <div class="card card--torn" style="margin-top:20px;">
+      <div class="status-block">
+        <div class="seal-badge seal-badge--synced">
+          <svg class="seal-badge__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="seal-badge__caption">Doğrulandı</span>
+        </div>
+        <h1>Kayıt zincirde doğrulandı</h1>
+      </div>
+      <dl class="receipt">
+        <div class="receipt-line">
+          <dt>Anonim k anahtarı</dt>
+          <dd class="mono">{{ result.k_anahtar }}</dd>
+        </div>
+        <div class="receipt-line">
+          <dt>Zincirde üyelik kanıtı (Merkle)</dt>
+          <dd class="mono">
+            {% if result.inclusion_verified %}
+              Evet — kayıt bu partinin doğrulanmış bir üyesi
+            {% else %}
+              HAYIR — kanıt doğrulanamadı
+            {% endif %}
+          </dd>
+        </div>
+        <div class="receipt-line">
+          <dt>Parti kökü (Merkle root)</dt>
+          <dd class="mono">{{ result.merkle_root }}</dd>
+        </div>
+        <div class="receipt-line">
+          <dt>Partideki kayıt sayısı</dt>
+          <dd>{{ result.record_count }}</dd>
+        </div>
+        <div class="receipt-line">
+          <dt>Zincir zaman damgası</dt>
+          <dd>{{ result.timestamp }}</dd>
+        </div>
+        <div class="receipt-line">
+          <dt>Mührü atan adres</dt>
+          <dd class="mono">{{ result.verifier_address }}</dd>
+        </div>
+        {% if result.polygonscan_url %}
+        <div class="receipt-line">
+          <dt>İşlem (Polygonscan)</dt>
+          <dd class="mono"><a href="{{ result.polygonscan_url }}" target="_blank" rel="noopener">{{ result.tx_hash }}</a></dd>
+        </div>
+        {% endif %}
+        {% if result.ipfs_cid %}
+        <div class="receipt-line">
+          <dt>IPFS CID (redakte görüntü)</dt>
+          <dd class="mono"><a href="{{ result.gateway_url }}" target="_blank" rel="noopener">{{ result.ipfs_cid }}</a></dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+  {% endif %}
+{% endblock %}

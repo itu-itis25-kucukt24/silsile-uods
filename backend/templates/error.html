@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — UODS{% endblock %}
+
+{% block content %}
+  <div class="card card--torn" style="max-width:560px; margin:0 auto;">
+    <div class="status-block">
+      <div class="seal-badge seal-badge--error">
+        <svg class="seal-badge__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 8v5M12 16.2v.2" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="8.5"/>
+        </svg>
+        <span class="seal-badge__caption">Durduruldu</span>
+      </div>
+      <h1>{{ title }}</h1>
+      <p>{{ message }}</p>
+    </div>
+
+    <div class="actions" style="justify-content:center;">
+      <a class="btn" href="{{ url_for('index') }}">Anasayfaya dön</a>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Kayıt Sırada — UODS{% endblock %}
+
+{% block content %}
+  <div class="card card--torn" style="max-width:620px; margin:0 auto;" id="pending-card" data-record-id="{{ record.id }}" data-gateway-base="{{ gateway_base }}">
+    <div class="status-block">
+      <div class="seal-badge seal-badge--pending" id="seal-badge">
+        <svg class="seal-badge__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="8.5"/>
+          <path d="M12 7.5v5l3 2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="seal-badge__caption" id="seal-caption">Sırada</span>
+      </div>
+      <h1 id="status-title">
+        {% if record.status == "FAILED" %}Aktarım başarısız, yeniden denenecek{% else %}Form alındı, mühürleniyor{% endif %}
+      </h1>
+      <p id="status-subtitle">
+        {% if record.status == "FAILED" %}
+          Bağlantı kesintisi ya da geçici bir hata oluştu. Sistem bağlantı geri
+          geldiğinde otomatik olarak yeniden deneyecek.
+        {% else %}
+          Bağlantı algılandığında kayıt otomatik olarak IPFS'e yüklenip Polygon
+          ağına mühürlenecek. Bu sayfa kendiliğinden güncellenir, bekleyebilirsiniz.
+        {% endif %}
+      </p>
+    </div>
+
+    <ol class="process-steps" id="process-steps">
+      <li class="process-step is-done">
+        <span class="process-step__index">1</span>
+        <span class="process-step__label">Form arayüzden alındı</span>
+        <span class="process-step__state">Tamam</span>
+      </li>
+      <li class="process-step is-done">
+        <span class="process-step__index">2</span>
+        <span class="process-step__label">Yerel kuyruğa kaydedildi</span>
+        <span class="process-step__state">Tamam</span>
+      </li>
+      <li class="process-step is-done">
+        <span class="process-step__index">3</span>
+        <span class="process-step__label">Görüntü işlendi ve okundu (OMR)</span>
+        <span class="process-step__state">Tamam</span>
+      </li>
+      <li class="process-step is-active" data-step="ipfs">
+        <span class="process-step__index">4</span>
+        <span class="process-step__label">IPFS'e yükleniyor</span>
+        <span class="process-step__state">Sürüyor</span>
+      </li>
+      <li class="process-step" data-step="chain">
+        <span class="process-step__index">5</span>
+        <span class="process-step__label">Polygon ağına toplu (parti) mühürleniyor</span>
+        <span class="process-step__state">Bekliyor</span>
+      </li>
+      <li class="process-step" data-step="done">
+        <span class="process-step__index">6</span>
+        <span class="process-step__label">Sonuç hazır</span>
+        <span class="process-step__state">Bekliyor</span>
+      </li>
+    </ol>
+
+    {% if record.status == "FAILED" and record.error_message %}
+      <div class="callout callout--amber" style="margin-top:20px;">
+        Son deneme notu: {{ record.error_message }} (deneme sayısı: {{ record.retry_count }})
+      </div>
+    {% endif %}
+
+    <dl class="receipt" id="synced-links" style="display:none; margin-top:18px;">
+      <div class="receipt-line">
+        <dt>IPFS CID</dt>
+        <dd class="mono"><a id="link-ipfs" href="#" target="_blank" rel="noopener"></a></dd>
+      </div>
+      <div class="receipt-line">
+        <dt>İşlem (TX) özeti</dt>
+        <dd class="mono"><a id="link-tx" href="#" target="_blank" rel="noopener"></a></dd>
+      </div>
+    </dl>
+
+    <p class="card__eyebrow" style="margin-top:24px;">Okunan cevap dizisi</p>
+    <ul class="bubble-sheet">
+      {% for c in cevaplar %}
+        <li class="bubble bubble--{{ c.css }}">
+          <span class="bubble__index">{{ loop.index }}</span>
+          <span class="bubble__mark">{{ c.value if c.value else ("∅" if c.css == "bos" else "✕") }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <div class="receipt-line" style="margin-top:18px;">
+      <dt>Anonim k anahtarı</dt>
+      <dd class="mono">{{ k_anahtar }}</dd>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn--ghost" href="{{ url_for('index') }}">Yeni form yükle</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/status_poll.js') }}"></script>
+{% endblock %}

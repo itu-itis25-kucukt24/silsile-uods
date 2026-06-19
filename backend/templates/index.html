@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Form Yükle — UODS{% endblock %}
+
+{% block content %}
+  <p class="card__eyebrow">Adım 1 / 6 — Arayüz</p>
+  <h1>Optik formu yükleyin</h1>
+  <p class="lede">
+    Fotoğrafını çektiğiniz optik cevap kâğıdını aşağıya yükleyin. Sistem; görüntüyü
+    temizler, kareleri okur, kimlik bilgisini tek yönlü olarak anonimleştirir ve
+    sonucu blokzincire mühürler. TC kimlik numarası ve isim hiçbir aşamada
+    sunucu dışına çıkmaz.
+  </p>
+
+  <div class="grid-two">
+    <div class="card">
+      <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" id="upload-form">
+        <div class="field">
+          <label for="optik_form">Optik form fotoğrafı</label>
+          <div class="dropzone" id="dropzone">
+            <svg class="dropzone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="3" y="5" width="18" height="14" rx="2"/>
+              <circle cx="9" cy="12" r="2.4"/>
+              <path d="M14 12.5l2-2 4 4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>Dosyayı buraya sürükleyin veya <strong>seçmek için tıklayın</strong></div>
+            <div class="field__hint">JPG, PNG, WEBP veya BMP · en fazla {{ "%d"|format(15) }} MB</div>
+            <input type="file" id="optik_form" name="optik_form" accept=".jpg,.jpeg,.png,.webp,.bmp" required style="margin-top:14px;">
+            <div class="dropzone__filename" id="dropzone-filename"></div>
+          </div>
+          <div id="camera-guide-wrap">
+            <img id="camera-guide-preview" alt="Yüklenen optik form önizlemesi">
+            <canvas id="camera-guide-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sinav_tarihi">Sınav tarihi</label>
+          <input type="date" id="sinav_tarihi" name="sinav_tarihi" required>
+          <div class="field__hint">
+            Anonimleştirme anahtarı (k), TC kimlik + isim + bu tarih + kurum tuzu
+            birleşiminin SHA-256 özetinden türetilir; girilen tarih kayıtla birlikte saklanmaz.
+          </div>
+        </div>
+
+        <button class="btn" type="submit">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 4v12m0-12l5 5m-5-5l-5 5M4 19h16" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Formu işle ve mühürle
+        </button>
+
+        <div class="kvkk-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>
+          </svg>
+          <span>
+            KVKK uyumluluğu: yüklenen fotoğraf, kimlik alanları okunduktan ve
+            anonimleştirildikten sonra sunucudan silinir; yalnızca anonim k anahtarı,
+            cevap dizisi ve görüntü bütünlük özeti yerel kuyrukta tutulur.
+          </span>
+        </div>
+      </form>
+    </div>
+
+    <div>
+      <div class="card">
+        <p class="card__eyebrow">Yerel kuyruk durumu</p>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat__count">{{ stats.PENDING }}</div>
+            <div class="stat__label"><span class="dot dot--pending"></span> Bekliyor</div>
+          </div>
+          <div class="stat">
+            <div class="stat__count">{{ stats.SYNCING }}</div>
+            <div class="stat__label"><span class="dot dot--syncing"></span> Aktarılıyor</div>
+          </div>
+          <div class="stat">
+            <div class="stat__count">{{ stats.SYNCED }}</div>
+            <div class="stat__label"><span class="dot dot--synced"></span> Mühürlendi</div>
+          </div>
+          <div class="stat">
+            <div class="stat__count">{{ stats.FAILED }}</div>
+            <div class="stat__label"><span class="dot dot--failed"></span> Başarısız</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__eyebrow">Bağlantı yoksa ne olur?</p>
+        <p style="margin:0; color:var(--ink-soft); font-size:0.9rem;">
+          İnternet erişimi olmadan da form işlenir ve cihazdaki SQLite kuyruğuna
+          <strong>Bekliyor</strong> durumunda yazılır. Arka plandaki senkronizasyon
+          servisi bağlantıyı periyodik olarak kontrol eder ve geri geldiğinde
+          kaydı otomatik olarak IPFS'e yükler ve Polygon ağına mühürler.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="card__eyebrow">Kurumsal sorgu</p>
+        <p style="margin:0 0 14px; color:var(--ink-soft); font-size:0.9rem;">
+          Elinizdeki TC kimlik / isim / tarih bilgisiyle zincirdeki bir kaydı
+          yeniden türetip doğrulamak için kurumsal sorgu ekranını kullanın.
+        </p>
+        <a class="btn btn--ghost" href="{{ url_for('verify') }}">Kaydı doğrula →</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/upload_preview.js') }}"></script>
+{% endblock %}

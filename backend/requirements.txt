@@ -1,0 +1,19 @@
+# Uç Optik Doğrulama Sistemi (UODS) - Python Bağımlılıkları
+# Test edilen ve doğrulanan sürümler ile kilitlenmiştir.
+
+Flask==3.1.3
+opencv-python-headless==4.13.0.92
+numpy==2.4.4
+web3==7.16.0
+python-dotenv==1.2.2
+requests==2.33.1
+eth-account==0.13.7
+Pillow==12.1.1
+
+# Üretim WSGI sunucusu (bkz. deploy/README.md). Flask'ın yerleşik
+# geliştirme sunucusu (app.run) üretim için tasarlanmamıştır.
+gunicorn==26.0.0
+
+# İsteğe bağlı hata izleme. SENTRY_DSN tanımlı değilse devre dışı kalır
+# ve app.py bu paket kurulu olmasa da çalışmaya devam eder.
+sentry-sdk[flask]==2.63.0
